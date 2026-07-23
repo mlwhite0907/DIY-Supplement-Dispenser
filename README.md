@@ -1,49 +1,45 @@
 # DIY Supplement Dispenser
 
-Custom Raspberry Pi-powered multi-supplement dispenser for powders and pills.
+Custom Raspberry Pi-powered multi-supplement dispenser for powders **and** pills.
 
-## Features
-- Accurate powder dispensing with load cell closed-loop control
-- Pill counting with optical confirmation
+**Goal**: A reliable, accurate, cabinet-friendly machine that automatically dispenses the exact daily amounts of your powdered supplements and pills.
+
+## Key Features
+- Closed-loop powder dispensing (load cell + auger)
+- Pill counting with confirmation
+- Vibration anti-clog system for reliable powder flow
 - Modular 3D-printable hoppers and mechanisms
 - Central collection cup with final weight verification
-- Touchscreen UI + WiFi remote control (phone/browser)
-- Vibration anti-clog system
-- Inventory tracking and alerts
+- Touchscreen UI + WiFi remote control from phone
+- Inventory tracking and low-stock alerts
 
-## Project Goals
-Build a reliable, cabinet-friendly automatic dispenser using your existing Raspberry Pi and 3D printer. Hybrid approach: buy reliable electronics, print custom mechanical parts.
+## Hybrid Approach
+- **Buy** the proven electronics (Pi, screen, motors, load cells, drivers)
+- **3D print** all the custom mechanical parts (hoppers, frames, augers, mounts)
 
-## Parts List (Starter ~6-8 modules)
+This keeps cost reasonable while giving us full control and reliability.
 
-### Electronics (Buy)
-- Raspberry Pi + 7" Touchscreen (~$60-110)
-- HX711 Load Cell Kit (5-10kg) - https://www.amazon.com/NOYITO-10kg-20kg-HX711-Combo/dp/B07BGS58TL
-- NEMA17 Stepper Motors + TMC2209 Drivers
-- Coin Vibration Motors pack
-- 12V Power Supply + buck converters
+## Repository Structure
+```
+├── docs/                  # Plans, BOM, guides
+├── hardware/              # Mechanical design notes & future STLs
+├── software/              # Python code, architecture
+├── 3d_models/             # STL / 3MF files (coming soon)
+└── README.md
+```
 
-### 3D Printable Parts
-- Powder hoppers (conical, steep walls)
-- Auger housings
-- Pill rotary dispensers
-- Main frame and mounts
-- Collection cup platform
+## Current Status
+- Architecture defined
+- Parts list (BOM) ready
+- Project plan with risk-first phases written
+- Ready to start Phase 1 prototype
 
-Total estimated cost for bought parts: $220-380
+## Quick Start
+1. Read [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) — this is the roadmap
+2. Check [docs/BOM.md](docs/BOM.md) for what to order
+3. Clone the repo and follow Phase 1 instructions
 
-## Getting Started
-1. Clone this repo
-2. 3D print the STL files (coming soon)
-3. Wire the electronics per wiring diagram (coming soon)
-4. Install software on Pi
+## License
+MIT — see [LICENSE](LICENSE)
 
-## Next Steps
-- Add detailed wiring diagrams
-- Add Python code for control
-- STL files for modules
-- Assembly instructions
-
-Contributions welcome! Let's make supplement dispensing accurate and automated.
-
-Built with love for better health routines.
+Built for reliability. Let’s make this work.

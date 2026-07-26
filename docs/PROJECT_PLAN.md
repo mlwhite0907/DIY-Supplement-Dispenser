@@ -1,54 +1,44 @@
-# Project Plan – DIY Supplement Dispenser
+# Project Plan – Vending-Style Supplement Drink Machine
 
-## Guiding Principle
-We will only scale up after we prove the hard parts work in the real world with actual powders.
+## Target
+A self-contained unit that looks like a modern beverage machine.  
+User selects supplements on the touchscreen → machine makes a complete mixed drink using powders + water from a refillable tank (and can also dispense pills).
 
-Powder flow, accuracy, and reliability are the highest risks. Everything else is easier once those are solved.
+Capacity: ~12 supplement stations.
 
-## Recommended Order of Work (What Will For Sure Work)
+## Core Requirements (Locked)
+- Refillable water tank (no permanent water-line connection)
+- Visual design similar to the latest concept render (white/black, tall touchscreen, dispensing area)
+- Automatic selection of which modules to activate based on touchscreen choice
+- Accurate powder dosing + water dosing + mixing
 
-### Phase 1 – Single Powder Module Prototype (Start Here)
-**Goal**: Prove we can reliably and accurately dispense one powder to within ±0.1 g.
+## Recommended Build Order (Risk-First)
 
-What we build:
-- One 3D-printed conical hopper with steep walls
-- Auger driven by NEMA17 stepper
-- Vibration motor for anti-clog
-- HX711 load cell under a collection cup
-- Simple test code on the Pi that dispenses to a target weight
+### Phase 1 – Core Drink Capability (Start Here)
+Prove one powder station + water + mixing works reliably.
+- Single powder hopper + auger + vibration + load cell
+- Refillable water tank + pump + flow control
+- Simple mixing into a cup
+- Basic touchscreen or serial control for testing
 
-Success criteria:
-- Multiple different powders flow without jamming
-- Repeated dispenses hit the target weight consistently
-- Easy to clean and reload
+Success = consistent, tasty, accurately dosed drinks with real powder.
 
-This phase is small, cheap, and gives us high confidence before we invest in the full cabinet system.
+### Phase 2 – Multi-Module + Pills
+- Expand to multiple powder stations
+- Add pill dispensing modules
+- Shared collection / mixing area
+- Frame that matches the vending visual style
 
-### Phase 2 – Pill Module + Multi-Module Frame
-- Design and print one reliable pill dropper (rotary disk or flapper + optical sensor)
-- Design the main frame that holds multiple modules
-- Test simultaneous or sequential dispensing into one cup
+### Phase 3 – Full Vending Experience
+- Complete 12-station layout
+- Polished touchscreen UI with recipes
+- Inventory, alerts, WiFi control
+- Enclosure matching the concept look
+- Hygiene / easy-clean design
 
-### Phase 3 – Full System Integration
-- Add remaining modules
-- Cabinet-friendly enclosure / mounts
-- Central scale verification
-- Power distribution and wiring
-
-### Phase 4 – Software & User Experience
-- Touchscreen UI
-- Recipe / schedule system
-- WiFi web interface + phone control
-- Inventory tracking and alerts
-
-### Phase 5 – Polish & Reliability
-- Calibration routines
-- Jam detection & recovery
-- Empty detection
+### Phase 4 – Polish & Reliability
+- Calibration, jam recovery, low-water detection
 - Long-term testing
 
-## Why This Order Works
-Starting with a single powder module lets us validate the hardest mechanical and control problems first. Once that works, adding more modules and software becomes much lower risk.
-
-## Next Immediate Action
-Order the Phase 1 parts (see BOM) and start designing the first hopper + auger housing in CAD.
+## Why This Order
+Mixing water + powder accurately and cleanly is the new highest risk. We validate that first before building the full 12-station cabinet-style machine.

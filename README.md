@@ -1,45 +1,44 @@
-# DIY Supplement Dispenser
+# DIY Supplement Dispenser (Vending Style)
 
-Custom Raspberry Pi-powered multi-supplement dispenser for powders **and** pills.
+Smart home vending machine for supplements that makes complete drinks.
 
-**Goal**: A reliable, accurate, cabinet-friendly machine that automatically dispenses the exact daily amounts of your powdered supplements and pills.
+**What it does**  
+Select any combination of up to 12 supplements on the touchscreen → machine automatically dispenses the correct powders + pills, adds water from a refillable tank, mixes a ready-to-drink beverage, and delivers it in a cup.
+
+Looks and feels like a modern coffee / beverage machine.
 
 ## Key Features
-- Closed-loop powder dispensing (load cell + auger)
-- Pill counting with confirmation
-- Vibration anti-clog system for reliable powder flow
-- Modular 3D-printable hoppers and mechanisms
-- Central collection cup with final weight verification
-- Touchscreen UI + WiFi remote control from phone
-- Inventory tracking and low-stock alerts
+- Touchscreen recipe selection (automatic module activation)
+- Up to 12 modular stations (powders + pills)
+- Closed-loop powder weighing for accuracy
+- Refillable water tank + precise water dosing
+- Mixing system for complete drinks
+- Vibration anti-clog on powder hoppers
+- Inventory tracking and alerts
+- WiFi / remote control option
 
-## Hybrid Approach
-- **Buy** the proven electronics (Pi, screen, motors, load cells, drivers)
-- **3D print** all the custom mechanical parts (hoppers, frames, augers, mounts)
-
-This keeps cost reasonable while giving us full control and reliability.
+## Hybrid Build Approach
+- Buy: electronics, pumps, motors, load cells, screen, water system parts
+- 3D print: hoppers, frames, mixing chamber, mounts, tank adapters
 
 ## Repository Structure
 ```
-├── docs/                  # Plans, BOM, guides
-├── hardware/              # Mechanical design notes & future STLs
-├── software/              # Python code, architecture
-├── 3d_models/             # STL / 3MF files (coming soon)
+├── docs/                  # Plans, BOM, design handoff
+├── hardware/              # Mechanical notes
+├── software/              # Pi code architecture
+├── 3d_models/             # STL files (coming)
 └── README.md
 ```
 
-## Current Status
-- Architecture defined
-- Parts list (BOM) ready
-- Project plan with risk-first phases written
-- Ready to start Phase 1 prototype
+## Current Direction (Locked)
+- Visual style matches the modern white/black beverage machine concept
+- Refillable water tank (no hard plumbing required)
+- Full drink output (water + powder mixed)
+- Touchscreen chooses which of the 12 supplements to use
 
-## Quick Start
-1. Read [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md) — this is the roadmap
-2. Check [docs/BOM.md](docs/BOM.md) for what to order
-3. Clone the repo and follow Phase 1 instructions
+## Getting Started
+1. Read [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md)
+2. Check [docs/BOM.md](docs/BOM.md)
+3. Start with Phase 1 (single powder + water + mix test)
 
-## License
-MIT — see [LICENSE](LICENSE)
-
-Built for reliability. Let’s make this work.
+MIT License — see LICENSE

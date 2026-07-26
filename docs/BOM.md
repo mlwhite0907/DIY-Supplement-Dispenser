@@ -1,37 +1,31 @@
-# Bill of Materials (BOM)
+# Bill of Materials – Vending Supplement Machine
 
-Starter configuration for ~6–8 modules. Prices approximate as of mid-2026. Always double-check current Amazon pricing.
+Updated for refillable water tank + complete drink output.
 
-## Core Electronics
-| Item | Qty | Approx Price | Notes / Link |
-|------|-----|--------------|--------------|
-| Raspberry Pi 4 or 5 (you already have one) | 1 | — | Existing |
-| Official or good 7–10" Touchscreen | 1 | $60–110 | HDMI capacitive preferred |
-| HX711 + 5kg or 10kg Load Cell kit | 1–2 | $10–15 | Main collection scale. [Example](https://www.amazon.com/NOYITO-10kg-20kg-HX711-Combo/dp/B07BGS58TL) |
-| NEMA17 Stepper Motors | 6–8 | $10–15 each | For augers and pill mechanisms |
-| TMC2209 Stepper Drivers | 6–8 | $5–10 each | Quiet and reliable |
-| Coin / Pancake Vibration Motors | 6–10 | $10 for pack | Anti-clog |
-| 12V Power Supply (5A+) + 5V buck | 1 | $15–25 | Motors + Pi |
-| Wiring, headers, proto board, fuses | — | $20–30 | Misc |
+## Core Electronics & Actuation
+- Raspberry Pi + large touchscreen (7–10")
+- HX711 + load cell(s) for powder accuracy
+- NEMA17 steppers + TMC2209 drivers (one per powder station)
+- Vibration motors for hoppers
+- Water pump (12V diaphragm or peristaltic) + tubing + check valves
+- Solenoid or flow sensor for precise water volume
+- Optional: small mixing motor / stirrer or ultrasonic transducer
+- Power supply (12V high-current + 5V for Pi)
 
-**Estimated electronics total**: $220–380 depending on screen and motor count.
+## Water System
+- Refillable tank (2–5 L food-safe, removable preferred)
+- Level sensor (float or capacitive)
+- Tubing, fittings, drip tray
 
-## 3D Printed Parts (Filament cost only)
-- Powder hoppers (conical, steep walls)
-- Auger housings / shafts
-- Pill rotary disks and tubes
-- Main frame / module mounts
-- Collection cup holder + scale platform
-- Cable management
+## Mechanical (mostly 3D printed)
+- Powder hoppers (steep cone + anti-clog features)
+- Pill modules
+- Mixing chamber or cup holder + stirrer mount
+- Main frame / enclosure panels matching the white/black vending look
+- Tank mount and lid
 
-Filament budget: $15–25 for the whole first version.
+## Estimated Starting Cost
+Electronics + water system: $300–500 depending on screen and number of motors.  
+Filament for prototypes: low.
 
-## Optional Later
-- Optical break-beam sensors for pill confirmation
-- Small UPS battery for the Pi
-- Camera for visual logging
-- Humidity sensors or silica holders
-
-## Notes
-- Prioritize Phase 1 parts first (1 load cell, 1–2 steppers, 1 vibration motor, power).
-- We will refine exact models and quantities as we prototype.
+Order Phase 1 parts first (1 powder module + full water + mix test rig).

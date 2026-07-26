@@ -1,20 +1,21 @@
-# Hardware & Mechanical Design
+# Hardware Notes – Vending Style
 
-## Design Principles for Reliability
-1. **Powder flow first** – Steep hopper walls (≥60–70°), smooth surfaces, vibration, optional agitator.
-2. **Closed-loop weighing** – Never rely only on open-loop steps for powders.
-3. **Modular** – Each supplement is its own removable station so you can expand or clean easily.
-4. **Cabinet friendly** – Compact footprint, clean front, easy access to hoppers.
+## Visual Target
+Match the modern white/black beverage machine look: tall form, large vertical touchscreen, clean dispensing area under the screen, transparent windows showing hoppers.
 
-## Key Subsystems
-- **Powder Module**: Hopper → Auger (stepper) → optional vibration → drops into central cup.
-- **Pill Module**: Tube/hopper → rotary plate or flapper → optical confirmation → drops into cup.
-- **Collection & Verification**: Removable cup sitting on load cell. Final weight check after all items dispensed.
-- **Frame**: Vertical or horizontal array of modules feeding a shared collection area.
+## Water System
+- Refillable tank only (no hard water line)
+- Removable tank preferred for easy filling and cleaning
+- Precise dosing via pump + timing or flow sensor
+- Drip tray under dispense area
 
-## 3D Printing Notes
-- Prefer PETG or smooth PLA for hoppers (food-contact friendly and easy to clean).
-- Print hoppers with the cone oriented for best surface finish on the inside.
-- Design for easy disassembly and cleaning.
+## Mixing Approach (to be validated in Phase 1)
+Option A (simplest): Dispense powder into cup → add water → brief motorized stir
+Option B: Sealed mixing chamber that then pours finished drink into cup
 
-STLs and CAD files will be added here as we design and validate each part.
+Hygiene and easy disassembly are critical.
+
+## Powder Modules
+Unchanged core: steep hopper + auger + vibration + closed-loop weighing.
+
+All custom parts designed for 3D printing and easy cleaning.

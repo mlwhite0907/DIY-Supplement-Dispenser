@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dispenser"
-version = "0.1.0"
+version = "0.2.0"
 description = "DIY Supplement Dispenser – Phase 1 control software (Pi + sim)"
 readme = "README.md"
 license = { text = "MIT" }
@@ -35,6 +35,9 @@ dispenser = "dispenser.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+dispenser = ["default_config.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

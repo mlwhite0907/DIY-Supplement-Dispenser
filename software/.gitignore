@@ -12,3 +12,5 @@ build/
 data/*
 !data/README.md
 *.db
+# Local calibration / machine-specific overrides (merged after default.yaml)
+config/local.yaml

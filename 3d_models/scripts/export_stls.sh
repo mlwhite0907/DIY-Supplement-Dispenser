@@ -51,6 +51,8 @@ PARTS=(
   auger_housing_v01
   test_stand_v01
   scale_platform_v01
+  hopper_lid_v01
+  loadcell_fixed_base_v01
 )
 
 FAILED=0

@@ -11,6 +11,9 @@ from dispenser.hardware.base import Scale
 class ScaleService:
     """Higher-level scale operations on top of a :class:`Scale` backend.
 
+    Scale backend errors (e.g. HX711 timeout) are re-raised — never coerced
+    to zero weight.
+
     Args:
         scale: Hardware or simulation scale.
         samples: Number of readings to average for :meth:`read_stable`.
@@ -28,15 +31,18 @@ class ScaleService:
         self.sample_delay_s = max(0.0, float(sample_delay_s))
 
     def tare(self) -> None:
-        """Zero the scale."""
+        """Zero the scale. Re-raises scale backend errors."""
         self.scale.tare()
 
     def read(self) -> float:
-        """Single reading in grams."""
+        """Single reading in grams. Re-raises scale backend errors."""
         return float(self.scale.read_grams())
 
     def read_stable(self, samples: int | None = None) -> float:
-        """Average several readings for a more stable value."""
+        """Average several readings for a more stable value.
+
+        Re-raises any scale backend error (does not treat failures as 0 g).
+        """
         n = self.samples if samples is None else max(1, int(samples))
         total = 0.0
         for i in range(n):

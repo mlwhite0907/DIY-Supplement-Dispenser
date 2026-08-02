@@ -1,6 +1,6 @@
 # System Architecture – DIY Supplement Dispenser
 
-High-level hardware + control architecture for the vending-style supplement drink machine. Phase 1 proves **one powder station + water + mix** on a bench rig; later phases add stations, pills, and enclosure without changing the core control ideas.
+High-level hardware + control architecture for the vending-style supplement drink machine. Phase 1 proves **one powder station + open-loop water + settle delay** on a bench rig; later phases add stations, pills, and enclosure without changing the core control ideas.
 
 Related diagrams:
 
@@ -16,13 +16,13 @@ Mechanical geometry for the Phase 1 powder module is locked in [PHASE1_DESIGN_HA
 
 | Goal | Approach |
 |------|----------|
-| Accurate powder dose | Closed-loop weighing under the cup (±0.1 g after settle) |
-| Water for a complete drink | Refillable tank (no hard plumbing); timed / flow / weight strategies |
-| Mix | Stirrer or controlled swirl into the same cup |
+| Accurate powder dose | Closed-loop weighing under the cup (**±0.1 g goal** after settle) |
+| Water for a complete drink | Refillable tank; **Phase 1: open-loop timed pump** after calibration |
+| “Mix” | **Settle delay only** in Phase 1 (no dedicated mixer motor) |
 | Scale later | Modular stations; shared orchestrator and recipe model |
 | Safety / hygiene | Food-contact paths isolated from mains; cleanable printed parts |
 
-**Not goals for Phase 1:** multi-hopper frame, pill module, polished UI, WiFi inventory.
+**Not goals for Phase 1:** multi-hopper frame, pill module, polished UI, WiFi inventory, closed-loop water, automatic stirring hardware.
 
 ---
 
@@ -31,36 +31,36 @@ Mechanical geometry for the Phase 1 powder module is locked in [PHASE1_DESIGN_HA
 ```mermaid
 flowchart TB
   subgraph UI["User Interface"]
-    TS[Touchscreen / Recipe UI]
-    SER[Serial / CLI test harness<br/>Phase 1]
+    TS[Touchscreen / Recipe UI later]
+    SER[CLI / local API<br/>Phase 1]
   end
 
   subgraph CTRL["Control"]
     PI[Raspberry Pi]
-    PI --> APP[Dispense Orchestrator]
-    APP --> RECIPE[Recipe Store]
-    APP --> STATE[State Machine]
+    PI --> APP[DispenseCycle linear script]
+    APP --> RECIPE[Recipe Store SQLite]
     APP --> LOG[Event / Weight Log]
   end
 
   subgraph POWDER["Powder Path — Phase 1: 1 station"]
-    HOP[Hopper 65° cone<br/>90 mm top ID → 22 mm outlet]
-    VIBE[Coin vibration motor]
+    HOP[Hopper 65° cone<br/>90 mm top ID → 22 mm outlet<br/>~450+ ml]
+    VIBE[Coin vibration motor pulses]
     AUG[Auger screw + NEMA17]
     OUT[Outlet nozzle]
     HOP --> AUG
-    VIBE -.->|anti-bridge| HOP
+    VIBE -.->|anti-bridge pulse| HOP
     AUG --> OUT
   end
 
-  subgraph WATER["Water Path"]
+  subgraph WATER["Water Path — Phase 1 open-loop"]
     TANK[Refillable tank 2–5 L]
-    LVL[Level sensor]
-    PUMP[12V pump]
-    FLOW[Optional flow sensor<br/>or timed open-loop]
+    LVL[Level sensor optional]
+    PUMP[12V pump timed]
+    FLOW[Flow pin reserved future]
     NOZ[Water nozzle]
-    TANK --> PUMP --> FLOW --> NOZ
+    TANK --> PUMP --> NOZ
     LVL -.-> TANK
+    FLOW -.->|optional later| PUMP
   end
 
   subgraph SENSE["Sensing"]
@@ -69,27 +69,26 @@ flowchart TB
     LC --- CUP
   end
 
-  subgraph MIX["Mixing"]
-    STIR[Stirrer / mix motor<br/>or manual swirl Phase 1]
+  subgraph MIX["After water"]
+    DELAY[mix_delay sleep only<br/>no mixer motor]
   end
 
   subgraph ACT["Actuation Drivers"]
     TMC[TMC2209 / stepper driver]
-    MOSFET[MOSFET / relay: pump, vibe, mix]
+    MOSFET[MOSFET / relay: pump, vibe]
   end
 
   TS --> PI
   SER --> PI
-  STATE --> TMC
-  STATE --> MOSFET
+  APP --> TMC
+  APP --> MOSFET
   TMC --> AUG
   MOSFET --> VIBE
   MOSFET --> PUMP
-  MOSFET --> STIR
   OUT -->|powder drops| CUP
   NOZ -->|water| CUP
-  STIR --> CUP
-  LC -->|weight feedback| APP
+  DELAY --> CUP
+  LC -->|weight feedback powder| APP
 ```
 
 Source: [diagrams/system_overview.mmd](diagrams/system_overview.mmd).
@@ -97,11 +96,11 @@ Source: [diagrams/system_overview.mmd](diagrams/system_overview.mmd).
 ### 2.1 Physical paths (Phase 1)
 
 1. **Powder:** Hopper → throat → auger barrel → outlet nozzle → free fall into cup on scale.  
-2. **Water:** Tank → pump → (optional flow sensor) → nozzle into same cup.  
-3. **Sense:** Single HX711 + load cell under cup; all closed-loop powder decisions use this reading.  
-4. **Mix:** After powder + water, stir in cup (or Phase 1: manual swirl for early tests).
+2. **Water:** Tank → pump → nozzle into same cup. **Timed open-loop** after calibrating ml/s. Flow sensor GPIO is **reserved for future**, not required for Phase 1.  
+3. **Sense:** Single HX711 + load cell under cup; all closed-loop **powder** decisions use this reading.  
+4. **Mix:** After powder + water, software waits `mix_delay_seconds` (settle / dissolve time). Manual swirl is fine for early tests. **No Phase 1 mixer motor.**
 
-Power domains should keep **12 V actuation** (pump, optional mix motor, stepper supply) separate from **5 V / 3.3 V logic** (Pi, HX711, sensors), with common ground and fused 12 V.
+Power domains should keep **12 V actuation** (pump, stepper supply) separate from **5 V / 3.3 V logic** (Pi, HX711, sensors), with common ground and fused 12 V.
 
 ---
 
@@ -113,7 +112,7 @@ Accuracy is **closed-loop on mass**, not open-loop step counts alone. Open-loop 
 
 ```mermaid
 sequenceDiagram
-  participant Orch as Orchestrator
+  participant Orch as DispenseCycle
   participant Scale as HX711
   participant Auger as Auger
   participant Vibe as Vibration
@@ -121,80 +120,77 @@ sequenceDiagram
   Orch->>Scale: tare / zero baseline
   loop until target approached
     Orch->>Auger: short burst
-    Orch->>Vibe: optional pulse
+    Orch->>Vibe: short pulse (not continuous)
     Orch->>Scale: settle_read
     Orch->>Orch: adapt next burst
   end
-  Orch->>Vibe: settle pulse
   Orch->>Scale: final_verify
 ```
 
-Full sequence including water/mix/faults: [diagrams/dispense_sequence.mmd](diagrams/dispense_sequence.mmd).
+Full sequence including water/settle/faults: [diagrams/dispense_sequence.mmd](diagrams/dispense_sequence.mmd).
 
 ### 3.2 Loop stages
 
 | Stage | Action | Notes |
 |-------|--------|-------|
-| **Preflight** | Confirm cup present, scale stable, hopper not flagged empty | Abort on NO_CUP / SCALE_FAULT |
+| **Preflight** | Confirm cup present when required; e-stop not asserted | Abort on NO_CUP |
 | **Zero** | Tare (or record baseline) with empty cup | Do not zero after powder starts |
-| **Burst dose** | Run auger for short time or N steps; optional concurrent vibe | Start conservative; adapt |
-| **Settle** | Wait for weight filter to stabilize (vibration decay + powder settle) | Typical settle window: tens to hundreds of ms; tune empirically |
+| **Burst dose** | Run auger for short time; optional concurrent **vibe pulse** | Start conservative; adapt |
+| **Settle** | Wait for weight filter to stabilize | Tune empirically |
 | **Measure** | Filtered mass vs target | Remaining = target − current |
-| **Adapt** | Shrink burst size as remaining shrinks; optional coarse then fine phase | Avoid overshoot |
-| **Verify** | After final settle, accept if within ±0.1 g | Else WARN/ABORT or micro-top-up policy (product decision) |
-| **Empty / jam** | If Δmass ≈ 0 over K consecutive bursts → longer vibe, then EMPTY/JAM fault | Operator clears / refills |
+| **Adapt** | Shrink burst size as remaining shrinks | Avoid overshoot |
+| **Verify** | After final settle, accept if within ±0.1 g **goal** | Else fail / top-up policy |
+| **Empty / jam** | If Δmass ≈ 0 over window → reverse-auger then EMPTY/JAM | Operator clears / refills |
 
 ### 3.3 Burst sizing heuristic (conceptual)
 
-- **Coarse phase:** larger bursts while `remaining > fine_threshold` (e.g. > 0.5 g).  
-- **Fine phase:** small steps or short timed pulses near target.  
-- **Overshoot margin:** stop bursts slightly early if the powder stream free-falls after motor stop; learn per-powder lag mass.  
-- **Vibration:** short pulses during dosing to break bridges; longer pulse only on no-progress; brief settle vibe before final read.
+- **Coarse phase:** larger bursts while remaining is large.  
+- **Fine phase:** short timed pulses near target.  
+- **Overshoot margin:** stop bursts slightly early if the powder stream free-falls after motor stop.  
+- **Vibration:** **short pulses** during dosing to break bridges; not continuous vibe for the whole dose; vibe off before final settle read.
 
-### 3.4 Why not open-loop only?
+### 3.4 Why not open-loop powder only?
 
-Supplement powders vary in density, humidity, and packing. Step-to-gram ratios drift. Closed-loop under the cup is the Phase 1 success path; open-loop ratios are only for speed-up and diagnostics.
+Supplement powders vary in density, humidity, and packing. Step-to-gram ratios drift. Closed-loop under the cup is the Phase 1 powder success path; open-loop ratios are only for speed-up and diagnostics.
 
 ---
 
-## 4. Water Dosing Strategies
+## 4. Water Dosing (Honest Phase 1)
 
-Phase 1 may implement one strategy first, then compare. All assume a **refillable tank** and a nozzle that discharges into the same cup.
+Phase 1 ships **one method**: open-loop timed pump. Other strategies are future options, not implemented claims.
 
-### 4.1 Timed pump (simplest)
+### 4.1 Timed pump (Phase 1 — implemented path)
 
 | | |
 |--|--|
 | **Method** | Calibrate ml/s at known head height; run pump for `t = V / rate`. |
 | **Pros** | Minimal sensors; easy first drink. |
 | **Cons** | Rate depends on tank level, tubing, voltage, wear; drift over session. |
-| **Mitigations** | Calibrate at half-tank; re-cal after tubing changes; optional level-based rate table. |
+| **Mitigations** | Calibrate at half-tank with graduated cylinder; re-cal after tubing changes; optional level interlock. |
 
-### 4.2 Flow sensor (pulse counting)
+Success is a **calibrated timed dose** verified offline — not automatic closed-loop correction of every pour.
 
-| | |
-|--|--|
-| **Method** | Inline hall/turbine sensor; stop at N pulses ≈ target volume. |
-| **Pros** | Better than pure time for mid-session level change. |
-| **Cons** | Sensor cost; low-flow accuracy; air bubbles; food-grade path. |
-| **Mitigations** | Prime line; debounce pulses; max-time timeout (dry-run protection). |
-
-### 4.3 Weight of water on the same scale
+### 4.2 Flow sensor (future / reserved pin)
 
 | | |
 |--|--|
-| **Method** | After powder verify, use Δmass of water (1 g ≈ 1 ml) to closed-loop the pump. |
-| **Pros** | Same sensor stack; good absolute accuracy if powder mass already known. |
-| **Cons** | Mixing of errors if powder still settling; cup splash; max cup weight vs load cell range. |
-| **Mitigations** | Stable powder reading first; soft pump duty; stop early for overshoot; verify total mass = powder + water. |
+| **Status** | GPIO reserved; **not** Phase 1 dosing software |
+| **Method** | Inline hall/turbine; stop at N pulses ≈ target volume |
+| **When** | After timed path is proven and drift becomes painful |
 
-### 4.4 Recommendation for Phase 1
+### 4.3 Weight of water on the same scale (future)
 
-1. **Bring-up:** timed pump with a measuring cup offline calibration.  
-2. **Accuracy goal:** prefer **weight-of-water** on the existing HX711 once powder loop is solid (fewest new parts).  
-3. **Optional upgrade:** flow sensor if weight-of-water conflicts with mixer mass or multi-nozzle plumbing later.
+| | |
+|--|--|
+| **Status** | Not Phase 1 software |
+| **Method** | After powder verify, closed-loop pump on Δmass (1 g ≈ 1 ml) |
+| **When** | Optional upgrade once powder loop is solid |
 
-**Success band (see [TESTING_PROTOCOL.md](TESTING_PROTOCOL.md)):** water volume within **±5–10 ml** of target (tighter if weight-based).
+### 4.4 Phase 1 recommendation
+
+1. **Bring-up and production path:** timed pump + measuring cup / graduated cylinder calibration.  
+2. **Do not claim** flow or weight-of-water as current features.  
+3. **Success band:** water volume within **±5–10 ml** of target after calibration — see [TESTING_PROTOCOL.md](TESTING_PROTOCOL.md).
 
 ---
 
@@ -205,36 +201,18 @@ Software owns schemas; this is the architecture-level outline only.
 ```text
 Recipe
   id, name, version
-  servings / default cup size
   ingredients[]:
-    - station_id | ingredient_type   # powder | pill | water
-    - target_amount                  # grams | count | ml
-    - order / phase                  # powder first, then water, then mix
-    - optional tolerances            # override global ±0.1 g etc.
-  mix:
-    - duration_ms, speed (if controllable)
-  metadata:
-    - notes, tags, active flag
-    - created/updated
+    - kind: powder | water | (pill later)
+    - target_amount   # grams | ml
+  mix_delay_seconds   # sleep only — no mixer motor in Phase 1
 
-IngredientCatalog (later)
-  id, display_name, type
-  density_hint, flow_class           # for burst heuristics
-  allergen / caution flags           # UI only; not medical claims
-
-StationMap
-  station_id → hardware binding
-    powder: stepper channel, vibe GPIO, hopper capacity estimate
-    pill: actuator channel
-    water: pump + strategy params
-
-DispenseJob (runtime)
+DispenseJob / CycleResult (runtime)
   recipe_id, started_at
   steps[] with measured vs target
-  faults[], final_status
+  faults / messages, final_status
 ```
 
-Phase 1 can hardcode a single recipe (`powder_g`, `water_ml`, `mix_ms`) and grow into JSON/YAML store in Phase 3.
+Phase 1 uses SQLite recipes seeded for demos (e.g. powder g + water ml).
 
 ---
 
@@ -242,16 +220,15 @@ Phase 1 can hardcode a single recipe (`powder_g`, `water_ml`, `mix_ms`) and grow
 
 | Failure | Detection | Response |
 |---------|-----------|----------|
-| **Powder jam / bridge** | No mass increase over K bursts despite auger motion | Longer vibe cycle; retry; then JAM fault and stop |
-| **Empty hopper** | Same as jam after vibe recovery fails; optional hopper level later | EMPTY fault; operator refill; do not keep spinning |
-| **Low water** | Level sensor low; pump timeout with no flow/weight increase | LOW_WATER; inhibit pump; prompt refill |
-| **Scale drift / noise** | Unstable zero; large jumps without actuation; cal weight fail | SCALE_FAULT; require recalibration ([TESTING_PROTOCOL.md](TESTING_PROTOCOL.md)) |
-| **No cup** | Weight below empty-platform threshold or cup-detect switch | NO_CUP; do not dose |
-| **Overshoot powder** | Final mass > target + tolerance | Log WARN; optional product policy: continue drink vs abort |
-| **Pump dry-run** | Max run time without Δvolume/Δweight | Stop pump; protect pump; LOW_WATER / PLUMBING fault |
-| **Stepper fault** | Driver fault pin / no motion while scale stuck (if instrumented) | Disable driver; fault UI |
-| **Spill / overflow** | Total mass > cup capacity limit | Emergency stop all actuators |
-| **Power brownout** | Undervoltage (if monitored) | Safe stop; leave partial job as ABORTED |
+| **Powder jam / bridge** | No mass increase over window despite auger motion | Reverse-auger / vibe pulse; then JAM fault and stop |
+| **Empty hopper** | Same after recovery fails | EMPTY fault; operator refill |
+| **Low water** | Level sensor low; pump timeout | LOW_WATER; inhibit pump; prompt refill |
+| **Scale drift / noise** | Unstable zero; cal weight fail | Require recalibration ([TESTING_PROTOCOL.md](TESTING_PROTOCOL.md)) |
+| **No cup** | Cup sensor or weight threshold | NO_CUP; do not dose |
+| **Overshoot powder** | Final mass > target + tolerance | Fail or WARN per product policy |
+| **Pump dry-run** | Max run time / level empty | Stop pump; protect pump |
+| **Spill / overflow** | Total mass > cup capacity limit (if enforced) | Emergency stop all actuators |
+| **E-stop** | GPIO25 (optional) asserted | All motion off |
 
 All faults should leave actuators **off**, log the job, and surface a clear operator action. See [SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md).
 
@@ -260,18 +237,18 @@ All faults should leave actuators **off**, log the job, and surface a clear oper
 ## 7. Phase 1 Bench Layout (Logical)
 
 ```text
-  [ Hopper + auger module on stand ]
+  [ Hopper + auger module on stand  — v0.2: auger from free end ]
            | powder drop
            v
   [ Cup ] ---- sits on ---- [ Load cell platform ]
            ^
            | water nozzle (side or above)
-  [ Tank ] --pump--> nozzle
+  [ Tank ] --timed pump--> nozzle
 
   [ Pi + drivers + PSU ] nearby, liquids routed away from electronics
 ```
 
-Drop distance short and direct (no long chute) for Phase 1 accuracy testing, per design handoff.
+Drop distance short and direct (no long chute) for Phase 1 accuracy testing, per design handoff. Hopper capacity ≈ **450+ ml** (frustum + cylinder).
 
 ---
 
@@ -279,9 +256,10 @@ Drop distance short and direct (no long chute) for Phase 1 accuracy testing, per
 
 | Phase | Architecture impact |
 |-------|---------------------|
-| **2** | N powder stations (N steppers/vibes); pill actuator; shared cup/scale or per-lane policy; station map in recipes |
-| **3** | Touchscreen UI bound to recipe store; inventory counters; WiFi; enclosure; hygiene features |
-| **4** | Hardened fault recovery, scheduled cal, soak tests, production-like reliability |
+| **2** | N powder stations; pill actuator; station map in recipes |
+| **3** | Touchscreen UI; inventory; WiFi; enclosure |
+| **4** | Hardened fault recovery, scheduled cal, soak tests |
+| **Optional anytime** | Flow-sensor water or weight-of-water; real mixer motor |
 
 Roadmap diagram: [diagrams/phase_roadmap.mmd](diagrams/phase_roadmap.mmd).
 
@@ -293,7 +271,7 @@ Roadmap diagram: [diagrams/phase_roadmap.mmd](diagrams/phase_roadmap.mmd).
 |-----|------|
 | [PROJECT_PLAN.md](PROJECT_PLAN.md) | Phases, schedule, exit criteria |
 | [PHASE1_DESIGN_HANDOFF.md](PHASE1_DESIGN_HANDOFF.md) | Locked powder module geometry |
-| [SOFTWARE_ARCHITECTURE.md](SOFTWARE_ARCHITECTURE.md) | Software layers and modules |
+| [SOFTWARE_ARCHITECTURE.md](SOFTWARE_ARCHITECTURE.md) | Software layers and real modules |
 | [ASSEMBLY_GUIDE.md](ASSEMBLY_GUIDE.md) | Build and first drink |
 | [TESTING_PROTOCOL.md](TESTING_PROTOCOL.md) | Calibration and success criteria |
 | [SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md) | Food contact, cleaning, disclaimers |

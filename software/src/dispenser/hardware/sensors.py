@@ -1,4 +1,4 @@
-"""Digital sensors: cup present, tank level, flow meter input."""
+"""Digital sensors: cup present, tank level, flow meter input, e-stop."""
 
 from __future__ import annotations
 
@@ -23,9 +23,19 @@ def _import_gpio() -> Any:
 class GpioDigitalSensor(DigitalSensor):
     """BCM digital input with optional pull-up/down and active level.
 
+    ``read()`` returns True when the logical condition is asserted:
+
+    * **Cup**: True = cup present
+    * **Level**: True = water present / OK to pump (``level_active_high`` selects
+      whether a HIGH or LOW GPIO level means water is present — adjust for your
+      float switch wiring)
+    * **E-stop**: True = stop pressed / asserted (typically NC to GND with
+      pull-up and ``active_high=False`` so pressed opens the circuit or pulls low)
+
     Args:
         pin: BCM pin number.
-        active_high: If True, HIGH means asserted.
+        active_high: If True, GPIO HIGH means asserted (``read()`` True).
+            If False, GPIO LOW means asserted.
         pull_up: If True, enable internal pull-up; else pull-down.
         name: Label for logs.
     """
@@ -47,6 +57,7 @@ class GpioDigitalSensor(DigitalSensor):
         self._gpio.setup(self.pin, self._gpio.IN, pull_up_down=pud)
 
     def read(self) -> bool:
+        """Return True when the sensor condition is asserted (see class doc)."""
         level = self._gpio.input(self.pin)
         high = level == self._gpio.HIGH
         return high if self.active_high else not high

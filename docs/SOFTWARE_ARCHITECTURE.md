@@ -1,6 +1,6 @@
 # Software Architecture – DIY Supplement Dispenser
 
-High-level software design only. **Implementation lives under `software/` and is owned by the software agent** — this document does not specify pin numbers, libraries, or source files in detail.
+High-level software design aligned with the **Phase 1 implementation** under `software/`. Pin numbers live in [hardware/PINOUT.md](../hardware/PINOUT.md) and `software/config/default.yaml` — not duplicated as a second source of truth here.
 
 Hardware and control intent: [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md).  
 Test expectations: [TESTING_PROTOCOL.md](TESTING_PROTOCOL.md).  
@@ -12,12 +12,13 @@ Phase plan: [PROJECT_PLAN.md](PROJECT_PLAN.md).
 
 | Phase | Software goal |
 |-------|----------------|
-| **1** | Reliable closed-loop single-powder dose + water + mix from CLI/serial (or minimal UI) |
+| **1** | Reliable closed-loop single-powder dose + **open-loop timed water** + **settle delay** from CLI / local API |
 | **2** | Multi-station dispatch + pill steps in one job |
 | **3** | Touchscreen recipes, inventory estimates, optional WiFi |
 | **4** | Hardened recovery, cal routines, logging for soak tests |
 
-Phase 1 success is defined by measured mass/volume, not UI polish.
+Phase 1 success is defined by measured mass and **calibrated** water volume, not UI polish.  
+**Powder goal:** ±0.1 g after settle. **Water:** timed dose checked with a graduated cylinder / scale — not automatic closed-loop volume.
 
 ---
 
@@ -26,192 +27,227 @@ Phase 1 success is defined by measured mass/volume, not UI polish.
 ```text
 ┌─────────────────────────────────────────────┐
 │  UI / Clients                                 │
-│  CLI · Serial REPL · Touch UI (later) · API   │
+│  CLI · FastAPI (localhost) · touch later      │
 └─────────────────────┬───────────────────────┘
                       │ commands / job requests
 ┌─────────────────────▼───────────────────────┐
 │  Application services                         │
-│  Recipe store · Job runner · Inventory (later)│
+│  Recipe store (SQLite) · DispenseCycle · logs │
 └─────────────────────┬───────────────────────┘
                       │
 ┌─────────────────────▼───────────────────────┐
-│  Dispense orchestrator (state machine)        │
-│  Preflight → Powder loop → Water → Mix → End  │
+│  DispenseCycle (linear script)                │
+│  Preflight → powder → water → mix_delay → end │
 └───────────┬─────────────────────┬───────────┘
             │                     │
 ┌───────────▼──────────┐  ┌───────▼────────────┐
-│  Domain policies       │  │  Device adapters    │
-│  Tolerances, bursts,   │  │  Scale · Stepper ·  │
-│  fault rules           │  │  Vibe · Pump · Mix  │
+│  Domain controllers    │  │  Hardware ports     │
+│  PowderDoser           │  │  Scale · Stepper ·  │
+│  WaterDoser (timed)    │  │  Vibe · Pump · I/O  │
+│  ScaleService          │  │                     │
 └────────────────────────┘  └─────────┬──────────┘
                                       │
                             ┌─────────▼──────────┐
                             │  HAL / drivers       │
-                            │  GPIO · SPI/I²C ·    │
-                            │  HX711 · TMC · PWM   │
+                            │  sim or Pi GPIO      │
                             └────────────────────┘
 ```
 
 **Rules of thumb:**
 
-- Orchestrator does not bit-bang HX711 directly; it asks a **Scale** port for filtered weight.
-- UI never drives motors; it only submits jobs and shows status.
+- Controllers do not bit-bang HX711 directly; they use **ScaleService** for filtered weight.
+- CLI/API never drive motors outside `DispenseCycle` / dosers; they submit jobs and show status.
 - Hardware pin maps stay in config/HAL — not scattered through recipe code.
 
 ---
 
-## 3. Core Modules (Logical)
+## 3. Real Module Names (Phase 1 package)
 
-### 3.1 Scale service
+Implementation package: `dispenser` under `software/src/dispenser/`.
 
-- Raw read → filter (moving average / median / settle detector)
-- `tare()`, `read_grams()`, `wait_stable(timeout)`
-- Calibration factor load/store
-- Faults: unstable, out of range, timeout
+| Logical role | Module / class |
+|--------------|----------------|
+| Config load | `config.py` + `config/default.yaml` |
+| Models | `models.py` — `Recipe`, `Ingredient`, `DispenseResult`, `CycleResult` |
+| DB | `db.py` — SQLite recipes, inventory, logs |
+| Runtime wiring | `main.py` — `DispenserRuntime` |
+| Scale helper | `control/scale_service.py` — `ScaleService` |
+| Powder closed-loop | `control/powder_dose.py` — `PowderDoser` |
+| Water timed dose | `control/water_dose.py` — `WaterDoser` |
+| Full recipe | `control/dispense_cycle.py` — `DispenseCycle` |
+| Calibration helpers | `control/calibration.py` — `CalibrationService` |
+| Hardware ports | `hardware/base.py` (+ `sim.py`, `scale_hx711.py`, `stepper_tmc.py`, `vibration.py`, `pump.py`, `sensors.py`) |
+| REST | `api/app.py` — FastAPI factory |
+| CLI | `cli.py` / `__main__.py` |
 
-### 3.2 Actuator services
+---
 
-| Service | Responsibilities |
-|---------|------------------|
-| **AugerStepper** | Enable/disable, move steps or timed run, acceleration policy optional |
-| **Vibration** | Timed pulses; duty limits so motor is not left on indefinitely |
-| **Pump** | Run with max-time guard; optional pulse count input from flow sensor |
-| **Mixer** | Timed stir |
+## 4. Core Behaviors (As Implemented)
 
-Each actuator exposes **safe stop** used by fault paths.
+### 4.1 ScaleService
 
-### 3.3 Powder dosing controller
+- Averaged / settled reads over the scale backend
+- `tare()`, gram reads, settle helpers
+- Calibration factor via config / calibration service
 
-Implements closed loop from [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md):
+### 4.2 Actuators (ports)
 
-1. Zero/tare context  
-2. Coarse/fine bursts with optional vibe  
-3. Settle + measure  
-4. Empty/jam detection (no progress)  
-5. Final verify vs ±0.1 g (configurable)
+| Port | Responsibilities |
+|------|------------------|
+| **StepperMotor** | Enable/disable, timed run (forward/reverse for jam reverse-auger) |
+| **VibrationMotor** | On/off (or soft PWM duty); dosing uses **short pulses**, not continuous vibe for the whole dose |
+| **Pump** | Timed run with calibrated `ml_per_second`; max-time style guards in doser |
+| **DigitalSensor** | Cup present, tank level; **flow pin reserved** for future use |
 
-Outputs: measured grams, burst stats, status enum.
+There is **no mixer motor driver** in Phase 1.
 
-### 3.4 Water dosing controller
+### 4.3 PowderDoser (closed-loop mass)
 
-Strategy interface:
+1. Optional tare  
+2. Auger bursts; **pulse** vibration assist between/during bursts  
+3. Settle + measure; adapt burst length near target  
+4. Jam path: no progress → reverse-auger, retry, then fault  
+5. Final settle + verify vs configurable tolerance (**goal ±0.1 g**)
 
-- `TimedWaterStrategy`
-- `FlowSensorWaterStrategy` (optional)
-- `WeightWaterStrategy` (preferred upgrade path)
+Outputs: measured grams, success flag, message (including jam retries).
 
-All strategies accept target ml (or g), timeouts, and abort callbacks.
+### 4.4 WaterDoser (open-loop timed only)
 
-### 3.5 Orchestrator / state machine
+**Phase 1 reality:** water is **open-loop timed** using `pump.ml_per_second` (and config timeout factor / tolerance for estimated actual).
 
-Suggested states:
+- **Implemented:** `WaterDoser` timed run; optional **level** sensor refuse if empty  
+- **Not implemented as dosing strategies:** no `FlowSensorWaterStrategy`, no `WeightStrategy` / weight-of-water closed loop  
+- **GPIO22 flow pin:** reserved in pinout/config for a **future** pulse-count path; not required for Phase 1 success  
+
+Accuracy is achieved by **calibrating** `ml_per_second` against a graduated cylinder or scale, then re-checking after tubing/tank changes — not by automatic closed-loop volume.
+
+### 4.5 DispenseCycle — linear script, not a full FSM
+
+`DispenseCycle` is a **linear script** with interlocks, not a formal multi-state machine with transition tables.
+
+Typical flow:
 
 ```text
-IDLE → PREFLIGHT → TARE → DOSE_POWDER → VERIFY_POWDER
-     → DOSE_WATER → MIX → COMPLETE
-     → FAULT (from any) → IDLE (after ack)
+cup check (if required)
+  → for each powder ingredient: PowderDoser.dose(...)
+  → for each water ingredient: WaterDoser.dose(...)
+  → mix_delay = time.sleep only
+  → log CycleResult
 ```
 
-Illegal transitions should be rejected (e.g. no dosing from FAULT without clear).
+| Feature | Phase 1 behavior |
+|---------|------------------|
+| **Cup check** | Optional `cup_sensor`; refuse start when `require_cup` and cup missing |
+| **E-stop** | Hardware pin reserved (GPIO25); safe-stop policy in wiring docs — cycle aborts / refuses work when interlocks fail |
+| **Concurrency lock** | One job at a time (do not run concurrent cycles against the same hardware) |
+| **mix_delay** | **`time.sleep(mix_delay_seconds)` only** — **no mixer motor**, no stir GPIO |
+| **Faults** | Failed powder/water step stops the cycle and logs; actuators should be left off by dosers |
 
-### 3.6 Recipe and job models
+There is no separate `IDLE / PREFLIGHT / DOSE_* / FAULT` enum FSM in the Phase 1 code path. Document later phases as “add recovery states” if needed — do not claim a full FSM today.
 
-Align with recipe outline in system architecture:
+### 4.6 Recipe and job models
 
-- Phase 1: hardcoded or single JSON recipe (`powder_g`, `water_ml`, `mix_ms`)
-- Later: multi-ingredient list + station map
+- Recipes in SQLite (`Recipe` + `Ingredient` with kind powder | water | …)
+- Phase 1 demos: e.g. `creatine_water` with powder grams + water ml
+- `DispenseResult` / `CycleResult` carry targets, actuals, messages, duration for logs
 
-`DispenseJob` records targets, measurements, timestamps, faults for logging.
+### 4.7 Logging
 
-### 3.7 Logging
-
-- Append-only session log (CSV or JSON lines): enough to complete [TESTING_PROTOCOL.md](TESTING_PROTOCOL.md) 20× series without handwritten tables
-- Log calibration events and software version label
-
----
-
-## 4. Configuration
-
-Prefer a single config surface (file or env) for:
-
-- GPIO / bus assignments (owned by implementer)
-- Scale calibration factor path
-- Burst defaults (coarse/fine thresholds, settle ms, jam K)
-- Water strategy + calibration constants (ml/s or pulses/ml)
-- Tolerances (powder_g, water_ml)
-- Cup empty / max weight thresholds
-
-Secrets are not expected in Phase 1; WiFi credentials appear only if Phase 3 remote control is added.
+- SQLite session logs via `Database.add_log` — enough for [TESTING_PROTOCOL.md](TESTING_PROTOCOL.md) campaigns without handwritten-only tables
+- Log success, messages, step payloads, duration
 
 ---
 
-## 5. Concurrency and Real-Time Notes
+## 5. Configuration
 
-- Prefer **one** owner thread/task for the orchestrator; actuators are not commanded from multiple clients concurrently.
-- Scale reads may be continuous in a background task with a thread-safe latest sample.
-- UI input should queue “start job” / “abort” rather than re-enter the state machine.
+Single YAML surface (`software/config/default.yaml`, override with `DISPENSER_CONFIG`):
+
+- GPIO / bus assignments (BCM; match [PINOUT](../hardware/PINOUT.md))
+- Scale calibration factor and sample counts
+- Powder burst / settle / jam parameters
+- Water: `ml_per_second` on pump, timeout factor, tolerance_ml (for estimated check)
+- Cycle: `mix_delay_seconds`, `require_cup`
+- Database path
+- API host/port
+
+`DISPENSER_SIM=1` forces simulation backends (Mac/CI).
+
+---
+
+## 6. API (Phase 1)
+
+- **FastAPI** app from `api/app.py` (`create_app`)
+- **Default use case: localhost** — bind to loopback for bench use (`127.0.0.1`); do not assume the API is hardened for the public internet
+- **Optional token:** when exposing beyond loopback, require a configured bearer/API token (optional; empty = no auth on local-only bind)
+- Typical endpoints: `/health`, `/recipes`, `/dispense`, `/inventory`, `/logs`, OpenAPI at `/docs`
+
+CLI remains the primary bring-up path (`python -m dispenser …`).
+
+---
+
+## 7. Concurrency and Real-Time Notes
+
+- Prefer **one** owner of the cycle at a time; actuators are not commanded from multiple clients concurrently (use a process/job lock around `run_recipe`).
 - Soft real-time is enough; settle windows are hundreds of ms, not microsecond control loops.
+- UI/API should queue “start job” / fail busy rather than re-enter the cycle mid-dose.
 
 ---
 
-## 6. Failure Handling (Software)
+## 8. Failure Handling (Software)
 
 | Fault | Software behavior |
 |-------|-------------------|
 | NO_CUP | Refuse start; actuators off |
-| SCALE_FAULT | Abort job; request recal |
-| JAM / EMPTY | Stop auger/vibe; surface clear/refill |
-| LOW_WATER / PUMP_TIMEOUT | Stop pump; abort or pause per policy |
-| OVERFILL | Emergency stop all |
-| USER_ABORT | Immediate safe stop; mark job aborted |
+| SCALE / dose out of tolerance | Fail step; cycle stops; log |
+| JAM / empty (no progress) | Reverse-auger retries then fail powder step |
+| LOW_WATER / level | Water doser refuses or aborts when level sensor says empty |
+| PUMP error / uncalibrated rate | Fail water step if `ml_per_second` ≤ 0 or pump throws |
+| USER abort / E-stop | Immediate safe stop (disable stepper, vibe/pump off) |
+| OVERFILL | Product policy later; refuse extreme targets in config if added |
 
 Faults are first-class job outcomes, not exceptions swallowed silently.
 
 ---
 
-## 7. Testing Support Hooks
+## 9. Testing Support Hooks
 
-Software should make protocol tests easy:
-
-- **Open-loop command:** fixed steps/time without closed loop  
-- **Closed-loop command:** full powder controller  
-- **Water-only command**  
-- **Full recipe command**  
-- **Calibrate scale** interactive or scripted  
-- Export last N runs for the 20× matrices  
-
-Unit tests can mock Scale/Actuators; bench tests use real HAL behind the same interfaces.
+- Sim mode: full stack without GPIO (`DISPENSER_SIM=1`)
+- CLI: `dose-powder`, `dose-water`, `run-recipe`, calibrate helpers
+- `pytest` under `software/tests/` (hardware-free)
+- Water accuracy tests need a **graduated cylinder** on real hardware (open-loop)
 
 ---
 
-## 8. UI Progression
+## 10. UI Progression
 
 | Stage | Interface |
 |-------|-----------|
-| Phase 1a | CLI: `cal`, `dose 3`, `water 250`, `drink demo` |
+| Phase 1a | CLI: dose powder/water, run recipe, serve API |
 | Phase 1b | Optional simple touch buttons mirroring CLI |
 | Phase 3 | Recipe browser, progress, inventory warnings |
-| Later | Optional local web UI / phone on LAN |
+| Later | Optional local web UI / phone on LAN (token recommended) |
 
 ---
 
-## 9. Explicit Non-Goals (Software Doc)
+## 11. Explicit Non-Goals / Non-Claims
 
-- No pinout tables here (avoid conflicting with hardware docs)
-- No full class diagrams required before first CLI works
+- **No** implemented flow-sensor or weight-of-water strategy classes as Phase 1 dosing
+- **No** mixer motor control — `mix_delay` is sleep only
+- **No** full formal FSM for the cycle
+- No pinout tables here (see hardware docs)
 - No cloud backend for Phase 1
-- No medical dosing decision logic or “recommended daily allowance” engines
+- No medical dosing decision logic
 
 ---
 
-## 10. Handoff to Software Agent
+## 12. Handoff to Software Agent
 
-Implement against this architecture and system control loops:
+Implement / keep aligned with:
 
-1. HAL + scale cal + open-loop step  
-2. Closed-loop powder meeting test protocol hooks  
-3. Water strategy + mix  
-4. Single-command full drink  
-5. Logging sufficient for 20× campaigns  
+1. HAL + scale cal + open-loop powder characterization  
+2. Closed-loop `PowderDoser` meeting test protocol hooks (±0.1 g **goal**)  
+3. Timed `WaterDoser` + calibrated `ml_per_second`  
+4. Linear `DispenseCycle` with cup / e-stop awareness and single-job lock  
+5. Local FastAPI + optional token; SQLite logging for 20× campaigns  
 
 Mechanical geometry remains constrained by [PHASE1_DESIGN_HANDOFF.md](PHASE1_DESIGN_HANDOFF.md); software adapts burst parameters to real flow, not the other way around, until tests fail hard enough to justify CAD revision (decision D4 in the project plan).

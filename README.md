@@ -1,10 +1,10 @@
 # DIY Supplement Dispenser
 
-**Smart home vending machine for supplement drinks** — pick powders (and later pills) on a touchscreen, dose by closed-loop load cell, add water from a refillable tank, mix, and pour a ready-to-drink cup.
+**DIY home machine for dosing supplement powders into a cup** — closed-loop load cell for powder, **open-loop timed water** from a refillable tank, then a short settle delay. Built as a **hybrid project**: buy electronics / pumps / motors; **3D-print** hoppers, frames, and mounts.
 
-Looks and feels like a modern beverage machine. Built as a **hybrid project**: buy electronics / pumps / motors; **3D-print** hoppers, frames, and mounts.
+Phase 1 is a **bench prototype**, not a polished vending appliance. Simulation works today; first physical builds need current **v0.2** print geometry and calibrated hardware. A drink in the cup is a **goal after calibration and testing**, not a guaranteed out-of-box product claim.
 
-| Status | Phase 1 foundation complete |
+| Status | Phase 1 software + docs foundation; physical bring-up pending prints |
 |--------|------------------------------|
 | License | MIT |
 | Controller | Raspberry Pi 5 (Pi 4 compatible) |
@@ -12,15 +12,15 @@ Looks and feels like a modern beverage machine. Built as a **hybrid project**: b
 
 ---
 
-## What it does
+## What it does (Phase 1 honesty)
 
-1. Select a recipe (or individual supplements) on the UI  
-2. Machine activates the right powder (and later pill) modules  
-3. **Closed-loop weighing** doses each powder to target (±0.1 g goal)  
-4. **Water** is pumped from a refillable tank (no hard plumbing)  
-5. Optional mix → ready drink in the cup  
+1. Run a recipe from **CLI** or **local FastAPI** (localhost-oriented)  
+2. **Closed-loop weighing** doses powder toward target (**±0.1 g goal** after settle)  
+3. **Water** is pumped on a **calibrated timer** (verify with graduated cylinder; flow pin reserved for later)  
+4. **`mix_delay`** is a **sleep only** — no mixer motor in Phase 1  
+5. Log results in SQLite  
 
-**Capacity target:** up to **12** modular stations.
+Later phases: multi-station, pills, touchscreen, up to **~12** modular stations.
 
 ---
 
@@ -35,10 +35,11 @@ Looks and feels like a modern beverage machine. Built as a **hybrid project**: b
 │   ├── PROJECT_PLAN.md       ← phases, exit criteria, schedule
 │   ├── SYSTEM_ARCHITECTURE.md
 │   ├── SOFTWARE_ARCHITECTURE.md
-│   ├── ASSEMBLY_GUIDE.md     ← bench → first full drink
+│   ├── ASSEMBLY_GUIDE.md     ← bench → first drink
 │   ├── TESTING_PROTOCOL.md
 │   ├── SAFETY_AND_HYGIENE.md
-│   ├── PHASE1_DESIGN_HANDOFF.md  ← locked CAD dimensions
+│   ├── PHASE1_DESIGN_HANDOFF.md  ← locked CAD dimensions (~450+ ml hopper, v0.2 stack-up)
+│   ├── images/               ← photos TBD
 │   └── diagrams/             ← Mermaid sources (.mmd)
 ├── hardware/                 ← electrical design
 │   ├── PINOUT.md             ← BCM GPIO map (locked for Phase 1)
@@ -48,11 +49,11 @@ Looks and feels like a modern beverage machine. Built as a **hybrid project**: b
 │   └── modules/              ← powder, water, scale notes
 ├── software/                 ← Python Phase 1 stack (sim + Pi)
 │   ├── src/dispenser/        ← control, hardware drivers, FastAPI, CLI
-│   ├── tests/                ← 23 tests, hardware-free
+│   ├── tests/                ← hardware-free pytest
 │   └── config/default.yaml
 └── 3d_models/                ← OpenSCAD + printable STLs
-    ├── openscad/             ← parametric sources
-    ├── stl/                  ← v01 exports for Bambu Studio
+    ├── openscad/             ← parametric sources (v0.2 stack-up in constants)
+    ├── stl/                  ← exports for Bambu Studio
     └── PRINT_GUIDE.md
 ```
 
@@ -68,31 +69,33 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 export DISPENSER_SIM=1
 
-pytest -q                          # 23 tests
+pytest -q
 python -m dispenser dose-powder --grams 3
 python -m dispenser dose-water --ml 200
 python -m dispenser run-recipe creatine_water
 python -m dispenser serve --port 8000
-# open http://127.0.0.1:8000/docs for the OpenAPI UI
+# open http://127.0.0.1:8000/docs for the OpenAPI UI (local use)
 ```
 
 On a Raspberry Pi, set `hardware.mode: pi` in `software/config/default.yaml` (or `DISPENSER_SIM=0`) and install Pi GPIO / HX711 libraries — see [software/README.md](software/README.md).
+
+API is intended for **localhost / bench** use; optional auth token when exposing beyond loopback — see [docs/SOFTWARE_ARCHITECTURE.md](docs/SOFTWARE_ARCHITECTURE.md).
 
 ---
 
 ## Phase 1 goal (start here)
 
-Prove **one powder station + water + mix** makes consistent, accurately dosed drinks before building a 12-station cabinet.
+Prove **one powder station + timed water + settle delay** on a bench before building a multi-station cabinet.
 
 | Subsystem | Approach |
 |-----------|----------|
-| Powder | Steep conical hopper → 3D-printed auger → NEMA17 + TMC2209 → vibration assist |
-| Accuracy | HX711 + 5 kg load cell under the cup (closed-loop) |
-| Water | Refillable 2–5 L tank + 12 V food-grade peristaltic pump |
-| Control | Raspberry Pi, YAML config, FastAPI + CLI |
-| Mechanics | PETG prints — see OpenSCAD / STL set |
+| Powder | Steep conical hopper (~**450+ ml**) → 3D-printed auger → NEMA17 + TMC2209 → **pulse** vibration assist |
+| Accuracy | HX711 + 5 kg load cell under the cup (closed-loop powder; **±0.1 g goal**) |
+| Water | Refillable 2–5 L tank + 12 V pump; **open-loop timed** after `ml_per_second` cal |
+| Control | Raspberry Pi, YAML config, CLI + local FastAPI |
+| Mechanics | PETG prints — **v0.2 stack-up** (closed free end; insert auger from free end) |
 
-**Success criteria:** powder within **±0.1 g** after settle; water within **±5–10 ml**. Full protocol: [docs/TESTING_PROTOCOL.md](docs/TESTING_PROTOCOL.md).
+**Success criteria:** powder within **±0.1 g** after settle (goal); water within **±5–10 ml** after open-loop calibration. Protocol: [docs/TESTING_PROTOCOL.md](docs/TESTING_PROTOCOL.md).
 
 ---
 
@@ -118,46 +121,49 @@ Full tables, colors, and schematics live under [`hardware/`](hardware/). Locked 
 
 | Function | GPIO (BCM) |
 |----------|------------|
-| HX711 DT / SCK | 5 / 6 |
-| Stepper STEP / DIR / EN | 12 / 13 / 16 |
-| Vibration MOSFET | 17 |
-| Pump MOSFET | 27 |
-| Flow / Level / Cup / E-stop | 22 / 23 / 24 / 25 |
+| HX711 DT / SCK | **5** / **6** |
+| Stepper STEP / DIR / EN | **12** / **13** / **16** |
+| Vibration MOSFET | **17** |
+| Pump MOSFET | **27** |
+| Flow (reserved) / Level / Cup / E-stop | **22** / **23** / **24** / **25** |
 
-**Rules of thumb:** dual PSU (official Pi 27W USB-C + separate fused **12 V** for motors/pump); common ground; **never** drive motors from Pi pins; MOSFET low-side switching with flyback protection.
+**Rules of thumb:** dual PSU (official Pi USB-C + separate fused **12 V** for motors/pump); common ground; **never** drive motors from Pi pins; MOSFET low-side switching with flyback protection.
 
 - [hardware/PINOUT.md](hardware/PINOUT.md)  
 - [hardware/WIRING.md](hardware/WIRING.md)  
 - [hardware/ELECTRICAL_SCHEMATIC.md](hardware/ELECTRICAL_SCHEMATIC.md)  
 - [hardware/POWER_BUDGET.md](hardware/POWER_BUDGET.md)  
+- [docs/ASSEMBLY_GUIDE.md](docs/ASSEMBLY_GUIDE.md)  
 
 ---
 
 ## Print the mechanics
 
-Parametric OpenSCAD sources + pre-exported STLs for **v0.1**:
+Parametric OpenSCAD sources + STLs. **First physical print should use v0.2 stack-up** (coupler zone, closed free end, shorter flights) — see [docs/PHASE1_DESIGN_HANDOFF.md](docs/PHASE1_DESIGN_HANDOFF.md) §4.6 and `3d_models/openscad/lib/constants.scad`.
 
-| Part | File |
+| Part | File (names may keep `_v01` for path stability) |
 |------|------|
-| Powder hopper (65° cone, Ø90→22) | `3d_models/stl/powder_hopper_v01.stl` |
+| Powder hopper (65° cone, Ø90→22, ~450+ ml) | `3d_models/stl/powder_hopper_v01.stl` |
 | Auger screw | `3d_models/stl/auger_screw_v01.stl` |
 | Auger housing + NEMA17 + vibe pocket | `3d_models/stl/auger_housing_v01.stl` |
 | Test stand | `3d_models/stl/test_stand_v01.stl` |
 | Scale platform (5 kg bar cell) | `3d_models/stl/scale_platform_v01.stl` |
 
 Material: **PETG**. Settings and orientations: [3d_models/PRINT_GUIDE.md](3d_models/PRINT_GUIDE.md).  
-Locked dimensions: [docs/PHASE1_DESIGN_HANDOFF.md](docs/PHASE1_DESIGN_HANDOFF.md).
+Hopper print note: point-down beds the **outlet rim**; interior is still **layered walls** — slow outer walls for finish.
 
 ```bash
 cd 3d_models && make stl    # re-export if OpenSCAD CLI is installed
 ```
+
+**Assembly:** insert auger from the **free end** (not through the motor plate).
 
 ---
 
 ## Assemble & test
 
 1. [docs/ASSEMBLY_GUIDE.md](docs/ASSEMBLY_GUIDE.md) — unbox → wire → dry-run → first drink  
-2. [docs/TESTING_PROTOCOL.md](docs/TESTING_PROTOCOL.md) — calibration + 20× dose trials  
+2. [docs/TESTING_PROTOCOL.md](docs/TESTING_PROTOCOL.md) — calibration + 20× powder trials + open-loop water  
 3. [docs/SAFETY_AND_HYGIENE.md](docs/SAFETY_AND_HYGIENE.md) — food-contact, cleaning, electrical isolation  
 
 **Not a medical device.** For personal convenience dosing of dietary supplements only. Clean wet parts regularly.
@@ -168,9 +174,9 @@ cd 3d_models && make stl    # re-export if OpenSCAD CLI is installed
 
 ```mermaid
 flowchart TB
-  UI[Touchscreen / API / CLI] --> CTRL[Dispense controller]
-  CTRL --> PWD[Powder module<br/>NEMA17 + vibe + auger]
-  CTRL --> WTR[Water system<br/>tank + pump]
+  UI[CLI / local API] --> CTRL[DispenseCycle]
+  CTRL --> PWD[Powder module<br/>NEMA17 + vibe pulse + auger]
+  CTRL --> WTR[Water system<br/>tank + timed pump]
   CTRL --> SCL[HX711 scale under cup]
   PWD --> CUP[Cup]
   WTR --> CUP
@@ -182,19 +188,20 @@ Dispense sequence (simplified):
 ```mermaid
 sequenceDiagram
   participant U as User
-  participant C as Controller
+  participant C as DispenseCycle
   participant S as Scale
-  participant A as Auger+Vibe
-  participant P as Pump
+  participant A as Auger+Vibe pulse
+  participant P as Pump timed
   U->>C: Recipe / dose request
   C->>S: Tare
   loop Until target weight
-    C->>A: Burst
+    C->>A: Burst + pulse
     C->>S: Read
   end
   C->>S: Settle + verify
-  C->>P: Dose water
-  C->>U: Done / log result
+  C->>P: Timed water (calibrated ml/s)
+  Note over C: mix_delay = sleep only
+  C->>U: Log result
 ```
 
 More diagrams: [`docs/diagrams/`](docs/diagrams/) and [docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md).
@@ -205,9 +212,9 @@ More diagrams: [`docs/diagrams/`](docs/diagrams/) and [docs/SYSTEM_ARCHITECTURE.
 
 | Phase | Focus | Exit when… |
 |-------|--------|------------|
-| **1** | Single powder + water + mix | ±0.1 g / ±5–10 ml proven on real powder |
+| **1** | Single powder + timed water + settle | ±0.1 g goal / ±5–10 ml proven on real powder |
 | **2** | Multi-module + pills + shared frame | 3+ stations reliable |
-| **3** | Full 12-station vending UI + inventory + WiFi | Daily-driver UX |
+| **3** | Full multi-station UI + inventory + WiFi | Daily-driver UX |
 | **4** | Jam recovery, long-run reliability, polish | Weeks of stable use |
 
 Details and weekly schedule: [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md).
@@ -217,11 +224,13 @@ Details and weekly schedule: [docs/PROJECT_PLAN.md](docs/PROJECT_PLAN.md).
 ## Software stack (Phase 1)
 
 - **Python 3.11+** package `dispenser`
-- Hardware abstractions + **sim backends** (Mac-friendly)
-- Closed-loop **powder dosing** with jam reverse-auger
-- Timed **water** dosing (flow sensor ready)
+- Hardware abstractions + **sim backends** (Mac-friendly) — **sim works**
+- Closed-loop **powder** dosing with jam reverse-auger; vibe **pulses**
+- **Timed water** only (`WaterDoser`); flow pin reserved future
+- **`mix_delay`** sleep — no mixer motor
+- **`DispenseCycle`** linear script + cup / interlocks — not a full FSM
 - **SQLite** recipes / inventory / logs
-- **FastAPI** REST API + **CLI**
+- **FastAPI** REST + **CLI**; localhost-oriented API, optional token for LAN
 - Config: `software/config/default.yaml` (GPIO map matches hardware docs)
 
 See [software/README.md](software/README.md) and [docs/SOFTWARE_ARCHITECTURE.md](docs/SOFTWARE_ARCHITECTURE.md).
@@ -231,9 +240,10 @@ See [software/README.md](software/README.md) and [docs/SOFTWARE_ARCHITECTURE.md]
 ## Contributing / iterating
 
 1. Prefer risk-first: improve Phase 1 dosing before expanding station count.  
-2. Keep the **GPIO map** and **hopper geometry** stable unless you bump a version (`_v02`).  
+2. Keep the **GPIO map** and **hopper geometry locks** (65°, 90→22) stable unless you bump a version.  
 3. Run `pytest` under `software/` with `DISPENSER_SIM=1` before committing software changes.  
-4. Re-export STLs after OpenSCAD edits (`3d_models/make stl`).
+4. Re-export STLs after OpenSCAD edits (`3d_models/make stl`).  
+5. Docs under `docs/` should match real behavior — do not invent closed-loop water or mixer motors.
 
 ---
 

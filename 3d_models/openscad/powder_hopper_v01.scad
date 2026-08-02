@@ -13,7 +13,7 @@
 //   Spigot (OD ≈ 26.4 mm) drops into housing inlet counterbore.
 //   4× M3 on 34 mm bolt circle clamp the pair (or bayonet later).
 //
-// Print: PETG, prefer outlet-on-bed (point-down) for smooth interior.
+// Print: PETG; prefer top-flange on bed. Point-down does NOT put interior on bed.
 // Open in OpenSCAD: F5 preview / F6 render. Export STL via scripts/export_stls.sh
 // ============================================================================
 

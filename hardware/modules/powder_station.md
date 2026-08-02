@@ -108,11 +108,13 @@ Prefer 5 V for Phase 1 (lower power, safer near Pi 5 V aux).
 
 ### 5.3 Drive pattern (software contract)
 
-Typical anti-bridge pattern (not exclusive):
+**Pulse only** — continuous vibe for the whole dose is **not** the Phase 1 contract (noise on the scale, motor wear).
+
+Typical anti-bridge pattern:
 
 - Short vibe pulses (50–150 ms) between or during slow auger bursts  
-- Avoid continuous vibe during final 0.2 g approach (scale noise)  
-- Always stop vibe before final settle weight reading  
+- No continuous ON through fine approach / final settle  
+- Always stop vibe before final settle weight reading
 
 ---
 
@@ -188,3 +190,4 @@ Each additional powder station needs its own TMC2209 (or multi-driver board), ST
 | Rev | Date | Notes |
 |-----|------|-------|
 | 1.0 | 2026-08-02 | Initial powder station electrical module doc |
+| 1.1 | 2026-08-02 | Vibe contract = pulse only (no continuous dose vibe) |

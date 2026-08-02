@@ -13,7 +13,7 @@ Prices below are **approximate ranges** only. **Verify live price, seller rating
 1. **Order Phase 1 MVP cart only** — one powder station + water path + Pi power.  
 2. Do **not** buy 12× NEMA17 / TMC2209 until dosing works.  
 3. Prefer **one combined order** for free-shipping thresholds, but split if you’re unsure about pump type (peristaltic vs diaphragm).  
-4. Check **food-grade** wording on anything in the wet path (tank, tube, pump head, check valves).  
+4. Check **food-grade** wording on anything in the wet path (tank, tube, pump head, check valves). PETG prints are **DIY provisional** only — see [SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md).  
 5. After MVP works: Full Phase 1 niceties (touchscreen, sensors, mix motor).  
 6. Phase 2: multiply powder electronics; keep **one shared** cup load cell.
 
@@ -21,9 +21,16 @@ Prices below are **approximate ranges** only. **Verify live price, seller rating
 
 | Cart | Rough total |
 |------|-------------|
-| Phase 1 MVP | **$250–500** |
+| Phase 1 MVP | **~$250–500** |
 | Full Phase 1 add-ons | **+$100–280** |
 | Per extra powder station | **+$25–50** electronics |
+
+> **⚠ Top shopping traps (do not skip)**  
+> 1. **TMC2209** example ASINs are often **printer stepsticks** — need carrier/breakout or careful pin wiring; **not** a plug-and-play Pi module.  
+> 2. **Load cell kits** (e.g. B07BGS58TL): **select 5 kg** — default is often 20 kg (worse ±0.1 g resolution).  
+> 3. **Coin vibe:** electrical default is **5 V** on MOSFET from 5 V rail — not 3 V.  
+> 4. **12 V PSU:** **5 A is enough for Phase 1**; 10 A is multi-station headroom later.  
+> 5. Every example ASIN below is **verify listing** only (title, options, seller).
 
 ---
 
@@ -31,8 +38,8 @@ Prices below are **approximate ranges** only. **Verify live price, seller rating
 
 | Column | Meaning |
 |--------|---------|
-| **Search keywords** | Paste into Amazon search |
-| **Example ASIN / link** | Known commodity parts when available — **confirm the listing matches the description** |
+| **Search keywords** | Paste into Amazon search (preferred when ASINs drift) |
+| **Example ASIN / link** | Commodity examples — **verify listing** still matches the part |
 | **Why this part** | Role in the machine |
 | **What to avoid** | Common junk / mismatch |
 
@@ -103,24 +110,30 @@ Search URL pattern: `https://www.amazon.com/s?k=URL+ENCODED+KEYWORDS`
 | | |
 |--|--|
 | **Search** | `HX711 module` `Stemedu HX711` |
-| **Example ASIN** | `B07MTYT95R` (Stemedu 5PCS HX711 — common multipack) |
+| **Example ASIN** | `B07MTYT95R` (**verify listing** — Stemedu-style 5PCS HX711 multipack) |
 | **Link** | [dp/B07MTYT95R](https://www.amazon.com/dp/B07MTYT95R) · [Search: HX711](https://www.amazon.com/s?k=HX711+load+cell+amplifier) |
 | **Why** | 24-bit ADC for strain-gauge load cells; industry-standard for DIY scales |
 | **Avoid** | Broken-out boards with no silkscreen; assuming every “HX711” breakout is 3.3 V-safe on DOUT without checking (most work with Pi 3.3 V logic; still verify) |
-| **~Price** | $6–15 for multipacks |
+| **~Price** | $6–15 for multipacks — check **unit** price on multipacks |
 
 ### 5 kg load cell (bar / bathroom-scale style)
 
 | | |
 |--|--|
 | **Search** | `5kg load cell bar` `HX711 load cell kit 5kg` `NOYITO load cell` |
-| **Example ASIN** | `B07BGS58TL` (NOYITO-style load cell kits — **confirm weight rating & includes HX711**) |
+| **Example ASIN** | `B07BGS58TL` (**verify listing** — NOYITO-style kits; **must select 5 kg variant**) |
 | **Link** | [dp/B07BGS58TL](https://www.amazon.com/dp/B07BGS58TL) · [Search: 5kg load cell HX711](https://www.amazon.com/s?k=5kg+load+cell+HX711+kit) |
 | **Why** | Closed-loop powder dosing: cup sits on cell; software runs auger until target grams |
-| **Avoid** | 1 kg cells if you want cup + full drink margin (5 kg is the sweet spot); 50 kg cells (poor resolution for ±0.1 g); half-bridge single-strain cheapies without four-wire color convention docs |
+| **Avoid** | Accepting the listing’s **default 20 kg** option (worse resolution for ±0.1 g); 50 kg cells; half-bridge single-strain cheapies without four-wire docs |
 | **~Price** | Bare cell $5–12; kit $10–20 |
 
-**Mount tip:** Standard rectangular bar cells are often **~80 mm long** with M4 holes. Design the 3D cup platform around the cell’s datasheet hole spacing after it arrives (measure with calipers).
+> **⚠ Load cell trap — B07BGS58TL and similar kits**  
+> - **Select 5 kg** in the size/options dropdown. Default is often **20 kg**.  
+> - **20 kg = worse resolution** for small powder doses (±0.1 g targets suffer).  
+> - Real bar dims may be ~**76 × 13.5 mm**; CAD / handoff often assumes ~**80 × 12.7 mm**.  
+> - **Verify hole pattern** (M4 or M5) with calipers before finalizing the printed cup platform.
+
+**Mount tip:** Do **not** trust “standard 80 mm” blindly — measure after arrival. Design/adjust the 3D cup platform around the actual hole spacing.
 
 ---
 
@@ -136,29 +149,40 @@ Search URL pattern: `https://www.amazon.com/s?k=URL+ENCODED+KEYWORDS`
 | **Avoid** | Tiny NEMA14 (weak); huge NEMA23 (overkill, heavier PSU); motors with unknown current >2.5 A unless your driver/PSU are sized |
 | **~Price** | $12–25 each |
 
-### TMC2209 driver module
+### TMC2209 driver (stepstick / carrier)
 
 | | |
 |--|--|
-| **Search** | `TMC2209 BIGTREETECH` `TMC2209 stepper driver UART` |
-| **Example ASIN** | `B07ZQ3C1XW` or `B08SMDY3SQ` (BIGTREETECH TMC2209-style modules — **verify listing title**) |
-| **Link** | [dp/B07ZQ3C1XW](https://www.amazon.com/dp/B07ZQ3C1XW) · [dp/B08SMDY3SQ](https://www.amazon.com/dp/B08SMDY3SQ) · [Search: TMC2209](https://www.amazon.com/s?k=TMC2209+BIGTREETECH+stepper+driver) |
+| **Search (chip form)** | `TMC2209 BIGTREETECH` `TMC2209 stepper driver UART` |
+| **Search (easier Pi wiring)** | `TMC2209 standalone` `TMC2209 breakout` `stepstick expansion board` |
+| **Example ASIN** | `B07ZQ3C1XW` or `B08SMDY3SQ` (**verify listing** — usually BIGTREETECH-style **printer stepsticks**) |
+| **Link** | [dp/B07ZQ3C1XW](https://www.amazon.com/dp/B07ZQ3C1XW) · [dp/B08SMDY3SQ](https://www.amazon.com/dp/B08SMDY3SQ) · [Search: TMC2209](https://www.amazon.com/s?k=TMC2209+BIGTREETECH+stepper+driver) · [Search: TMC2209 standalone](https://www.amazon.com/s?k=TMC2209+standalone) · [Search: stepstick expansion](https://www.amazon.com/s?k=stepstick+expansion+board) |
 | **Why** | Quiet StealthChop, good microstepping, tunable current — better powder metering than A4988 clunk |
-| **Avoid** | Counterfeit “TMC” with fake markings; bare bare-chip without heatsink pad if you’ll run high current continuous; forgetting series resistors / level details for UART on Pi (STEP/DIR-only mode is fine for Phase 1) |
-| **~Price** | $8–15 |
+| **Avoid** | Treating a bare stepstick as a “plug into Pi” module; counterfeit “TMC”; multipacks that hide poor unit price; UART level issues (STEP/DIR-only is fine for Phase 1) |
+| **~Price** | $8–15 per stick; multipacks common — **check unit cost** before buying 5-packs for one station |
+
+> **⚠ TMC2209 is a printer stepstick — not a plug-and-play Pi module**  
+> ASINs like **B07ZQ3C1XW** / **B08SMDY3SQ** (verify listing) are typically **SilentStepStick-form 3D-printer drivers**. They are **not** a ready HAT/breakout with labeled Dupont-friendly rails.  
+> **You need one of:**  
+> 1. A **stepstick expansion / carrier board** (or printer mainboard footprint), **or**  
+> 2. **Careful pin wiring** — VMOT (12 V), GND, VIO/logic, STEP, DIR, EN, motor A/B coils — with correct 3.3 V logic assumptions.  
+> **Prefer searching:** `TMC2209 standalone`, `TMC2209 breakout`, or `stepstick expansion board` if you want fewer pinout mistakes.  
+> **Multipack warning:** 5-packs look cheap; fine for Phase 2, wasteful before one station works. Compare **$/driver**.
 
 ---
 
 ## 4. Vibration motors + switching
 
-### Coin / pancake vibration motors
+### Coin / pancake vibration motors (**5 V electrical default**)
 
 | | |
 |--|--|
-| **Search** | `coin vibration motor 10x3mm` `1027 vibration motor 3V` `pancake vibrator motor 10mm` |
-| **Link** | [Search: coin vibe 10x3](https://www.amazon.com/s?k=coin+vibration+motor+10x3mm+3V) |
+| **Search** | `coin vibration motor 10x3mm 5V` `1027 vibration motor 5V` `pancake vibrator motor 10mm` |
+| **Link** | [Search: coin vibe 10x3 5V](https://www.amazon.com/s?k=coin+vibration+motor+10x3mm+5V) · [Search: coin vibe 10mm](https://www.amazon.com/s?k=coin+vibration+motor+10x3mm) |
 | **Why** | Anti-bridging on hopper wall / barrel pocket (see Phase 1 handoff Ø10–12 × ~3 mm) |
-| **Avoid** | Huge eccentric pager motors that don’t fit the pocket; 12 V industrial vibrators for Phase 1 |
+| **Default wiring** | **5 V coin motor** → MOSFET switch from **5 V rail**; Pi GPIO only drives the MOSFET gate |
+| **3 V motors** | **Only** with a **series resistor** from 5 V, or a dedicated **3 V supply** — not the project electrical default |
+| **Avoid** | Documenting/wiring as if 3 V is the system default; huge eccentric motors that don’t fit the pocket; 12 V industrial vibrators for Phase 1 |
 | **~Price** | $5–12 per 5–10 pack |
 
 ### Logic-level MOSFET modules (pump + vibe)
@@ -271,15 +295,21 @@ Search URL pattern: `https://www.amazon.com/s?k=URL+ENCODED+KEYWORDS`
 
 ## 6. Power supply (12 V rail)
 
-### 12 V 10 A (or 15 A) switching PSU
+### 12 V PSU — **5 A Phase 1 / 10 A future**
 
 | | |
 |--|--|
-| **Search** | `12V 10A switching power supply` `12V 15A power supply Mean Well` `LRS-150-12` |
-| **Link** | [Search: 12V 10A PSU](https://www.amazon.com/s?k=12V+10A+switching+power+supply) · [Search: Mean Well 12V](https://www.amazon.com/s?k=Mean+Well+LRS-150-12) |
-| **Why** | NEMA17 + pump + future stations; **10 A minimum** for Phase 1 comfort; **15 A** nicer |
-| **Avoid** | Undersized 2 A “LED” supplies; no-name PSUs with no strain relief / safety marks for permanent installs; powering Pi from this without a proper buck |
-| **~Price** | $20–45 |
+| **Search (Phase 1 MVP)** | `12V 5A switching power supply` |
+| **Search (headroom / multi-station later)** | `12V 10A switching power supply` `Mean Well LRS-150-12` |
+| **Link** | [Search: 12V 5A PSU](https://www.amazon.com/s?k=12V+5A+switching+power+supply) · [Search: 12V 10A PSU](https://www.amazon.com/s?k=12V+10A+switching+power+supply) · [Search: Mean Well 12V](https://www.amazon.com/s?k=Mean+Well+LRS-150-12) |
+| **Why** | Powers NEMA17 VMOT + 12 V pump. Phase 1 peak is ~**3–5 A** → **12 V 5 A is enough for MVP**. **10 A** is optional headroom for multi-station Phase 2 — **not required** for first cart |
+| **Avoid** | Treating “must be 10 A” as an MVP rule; undersized 2 A “LED” supplies; powering Pi from this without a proper buck; skipping fuse on 12 V |
+| **~Price** | 5 A ~$15–30; 10–15 A ~$20–45 |
+
+> **⚠ PSU sizing**  
+> - **Phase 1 MVP:** **12 V 5 A** covers one stepper + pump with margin.  
+> - **10 A:** buy when you add stations or want spare headroom — not a hard MVP requirement.  
+> - Coin vibe is on the **5 V** rail (not this PSU’s current budget in the usual design).
 
 ### Terminal blocks / distribution
 
@@ -372,15 +402,15 @@ Search URL pattern: `https://www.amazon.com/s?k=URL+ENCODED+KEYWORDS`
 
 ---
 
-## 9. Example ASINs quick reference
+## 9. Example ASINs quick reference (**verify listing**)
 
-> Double-check that the live listing still matches the part. ASINs get recycled or retitled.
+> **Verify listing** every time: ASINs get recycled, retitled, or option-defaults change. Prefer search keywords if the page no longer matches.
 
 | Part | Example ASIN | Notes |
 |------|--------------|-------|
-| HX711 multipack (Stemedu-style) | `B07MTYT95R` | [amazon.com/dp/B07MTYT95R](https://www.amazon.com/dp/B07MTYT95R) |
-| Load cell kit (NOYITO-style) | `B07BGS58TL` | [amazon.com/dp/B07BGS58TL](https://www.amazon.com/dp/B07BGS58TL) — confirm 5 kg |
-| TMC2209 (BIGTREETECH-style) | `B07ZQ3C1XW` / `B08SMDY3SQ` | [B07ZQ3C1XW](https://www.amazon.com/dp/B07ZQ3C1XW) · [B08SMDY3SQ](https://www.amazon.com/dp/B08SMDY3SQ) |
+| HX711 multipack (Stemedu-style) | `B07MTYT95R` | [amazon.com/dp/B07MTYT95R](https://www.amazon.com/dp/B07MTYT95R) — **verify listing**; multipack unit price |
+| Load cell kit (NOYITO-style) | `B07BGS58TL` | [amazon.com/dp/B07BGS58TL](https://www.amazon.com/dp/B07BGS58TL) — **select 5 kg** (not 20 kg default) |
+| TMC2209 (BIGTREETECH-style stepstick) | `B07ZQ3C1XW` / `B08SMDY3SQ` | [B07ZQ3C1XW](https://www.amazon.com/dp/B07ZQ3C1XW) · [B08SMDY3SQ](https://www.amazon.com/dp/B08SMDY3SQ) — **printer stepsticks**; need carrier or pin wiring; multipack pricing trap |
 | YF-S201 flow sensor | Search `YF-S201` | Common generic |
 | Pi 5 / 27W PSU / cooler | Search official / authorized sellers | Prefer reputable Pi resellers |
 
@@ -388,27 +418,29 @@ Search URL pattern: `https://www.amazon.com/s?k=URL+ENCODED+KEYWORDS`
 
 ## 10. Phase 1 MVP “add to cart” list (copy/paste)
 
-Use search keywords if ASIN drifts:
+Use search keywords if ASIN drifts. All ASINs = **verify listing**.
 
 1. Raspberry Pi 5 (4 or 8 GB) — *skip if you already own a Pi 4/5*  
 2. Official 27W USB-C PSU + Active Cooler  
 3. microSD 64 GB A2  
-4. HX711 board(s) — e.g. ASIN `B07MTYT95R`  
-5. 5 kg load cell or kit — e.g. ASIN `B07BGS58TL`  
+4. HX711 board(s) — e.g. ASIN `B07MTYT95R` (**verify listing**)  
+5. **5 kg** load cell or kit — e.g. ASIN `B07BGS58TL` — **select 5 kg option** (not 20 kg)  
 6. NEMA17 1.5–2 A, ≥40 mm body  
-7. TMC2209 module — e.g. `B07ZQ3C1XW` / `B08SMDY3SQ`  
-8. Coin vibration motors 10×3 mm (pack)  
+7. TMC2209 — e.g. `B07ZQ3C1XW` / `B08SMDY3SQ` (**verify listing**; **stepstick** — plan carrier/breakout or pin wiring; or search `TMC2209 standalone`)  
+8. Coin vibration motors 10×3 mm, prefer **5 V** (pack) — MOSFET from 5 V rail  
 9. Logic MOSFET module(s) (enough channels for vibe + pump)  
-10. 12 V 10 A (or 15 A) switching PSU  
+10. **12 V 5 A** switching PSU (enough for Phase 1); **10 A** only if you want multi-station headroom early  
 11. Terminal block + inline fuse  
 12. Breadboard + Dupont kit + 18 AWG wire  
-13. M3 (and M4) screw assortment  
+13. M3 (and M4/M5) screw assortment — match load-cell holes after measure  
 14. 12 V food-grade peristaltic pump + matching **FC** silicone tube  
 15. Food-grade check valves  
 16. 2–5 L food-safe tank  
 17. Multimeter / calipers if missing  
 
 **Defer:** 10" touchscreen, 11 extra steppers, enclosure aluminum extrusion, pill hardware.
+
+**Honest Phase 1 MVP total:** ~**$250–500** parts (prices vary; verify live).
 
 ---
 
@@ -433,6 +465,10 @@ Use search keywords if ASIN drifts:
 | Pump listings that show **silicone** tube path | Diaphragm pumps with unknown rubber and no spare parts |
 | Easy-to-disassemble hoppers (your prints) | Permanent glued powder paths |
 
+> **⚠ PETG / printed powder path**  
+> PETG is **DIY provisional** for hoppers/augers — practical and cleanable for home prototypes, **not** certified food equipment. This project is **not** NSF/commercial food-service gear.  
+> Full hygiene, cleaning, and disclaimers: **[SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md)**.
+
 Home DIY ≠ commercial NSF certification. Still: **if you wouldn’t put it in a kitchen drink project, don’t put it in this machine.**
 
 ---
@@ -441,9 +477,10 @@ Home DIY ≠ commercial NSF certification. Still: **if you wouldn’t put it in 
 
 - ★4.3+ with recent reviews that include photos  
 - “Sold by” Amazon or known brand storefront when possible for Pi and PSUs  
-- For steppers/drivers: reviews mentioning 3D printers or CNC (same use case)  
+- For steppers/drivers: reviews mentioning 3D printers or CNC (same use case) — remember those **TMC** listings are often **stepsticks**  
 - Reject listings with stock photos only and no dimensional drawing for mechanical fit  
-- Watch unit price on multipacks (HX711, vibe motors) — multipacks usually win  
+- Watch **unit** price on multipacks (HX711, TMC2209, vibe motors) — multipacks usually win **per unit**, but don’t over-buy Phase 2 qty early  
+- On multi-option listings (load cell kg rating): open the dropdown — **defaults lie**
 
 ---
 
@@ -452,3 +489,4 @@ Home DIY ≠ commercial NSF certification. Still: **if you wouldn’t put it in 
 - [BOM.md](BOM.md) — full quantities, subtotals, power budget  
 - [SHOPPING_CHECKLIST.md](SHOPPING_CHECKLIST.md) — printable checkboxes  
 - [PHASE1_DESIGN_HANDOFF.md](PHASE1_DESIGN_HANDOFF.md) — mechanical dimensions to match parts  
+- [SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md) — food-contact, PETG provisional, cleaning  

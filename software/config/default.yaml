@@ -1,5 +1,7 @@
 # DIY Supplement Dispenser – default configuration (Phase 1)
 # Override path with DISPENSER_CONFIG or --config
+#
+# GPIO map: DT=5 SCK=6 STEP=12 DIR=13 EN=16 VIBE=17 PUMP=27 FLOW=22 LEVEL=23 CUP=24 ESTOP=25
 
 hardware:
   # "sim" | "pi" — also forced to sim when DISPENSER_SIM=1
@@ -40,9 +42,17 @@ hardware:
     flow_pin: 22
     level_pin: 23
     cup_pin: 24
+    estop_pin: 25
     # whether cup present sensor is active-high
     cup_active_high: true
-    level_active_high: false  # float switch often active-low when empty
+    # True when water is present (adjust for your float switch polarity)
+    level_active_high: true
+    # E-stop: NC to GND with pull-up; active-low when pressed
+    estop_active_low: true
+    # Set false to disable optional sensors (None at runtime)
+    cup_enabled: true
+    level_enabled: true
+    estop_enabled: true
 
 dosing:
   powder:
@@ -64,13 +74,16 @@ dosing:
     # reverse-auger duration on jam
     jam_reverse_seconds: 0.4
     max_jam_retries: 2
+    # best-effort overshoot reverse (may not remove powder from cup)
+    overshoot_reverse_seconds: 0.08
+    max_overshoot_reverses: 3
     # sim: grams dispensed per second of auger run (approx)
     sim_grams_per_second: 2.5
 
   water:
     # safety timeout multiplier on expected time
     timeout_factor: 1.5
-    # success tolerance (ml) for flow-meter path; timed path uses estimate
+    # reserved for future closed-loop flow path; Phase 1 is open-loop timed
     tolerance_ml: 5.0
     # sim flow rate (ml/s) if not using calibrated pump rate
     sim_ml_per_second: 25.0
@@ -85,8 +98,12 @@ database:
   path: data/dispenser.db
 
 api:
-  host: "0.0.0.0"
+  # Bind localhost by default (override with --host or api.host for LAN)
+  host: "127.0.0.1"
   port: 8000
+  # Optional API token for mutating routes (POST /dispense, POST /recipes).
+  # Empty = disabled. Override with env DISPENSER_API_TOKEN.
+  token: ""
 
 logging:
   level: INFO

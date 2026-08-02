@@ -18,6 +18,10 @@ from typing import Any
 from dispenser.hardware.base import Scale
 
 
+class ScaleError(RuntimeError):
+    """Raised when the load cell cannot produce a valid reading."""
+
+
 def _try_import_gpio() -> Any:
     try:
         import RPi.GPIO as GPIO  # type: ignore[import-untyped]
@@ -102,12 +106,20 @@ class HX711Scale(Scale):
         if self._backend == "hx711" and self._hx is not None:
             if hasattr(self._hx, "get_raw_data_mean"):
                 val = self._hx.get_raw_data_mean(times=1)
-                return int(val) if val is not None else 0
+                if val is None:
+                    raise ScaleError("HX711 library returned None (no data)")
+                return int(val)
             if hasattr(self._hx, "get_value"):
-                return int(self._hx.get_value(1))
+                val = self._hx.get_value(1)
+                if val is None:
+                    raise ScaleError("HX711 library returned None (get_value)")
+                return int(val)
             if hasattr(self._hx, "read"):
-                return int(self._hx.read())
-            return 0
+                val = self._hx.read()
+                if val is None:
+                    raise ScaleError("HX711 library returned None (read)")
+                return int(val)
+            raise ScaleError("HX711 backend has no supported read method")
 
         # Bit-bang HX711 (24-bit two's complement)
         GPIO = self._gpio
@@ -115,34 +127,51 @@ class HX711Scale(Scale):
         deadline = time.time() + 0.5
         while GPIO.input(self.dt_pin) == 1:
             if time.time() > deadline:
-                return 0
+                raise ScaleError(
+                    f"HX711 DT timeout on pin {self.dt_pin} (data not ready)"
+                )
             time.sleep(0.0001)
+
         count = 0
-        for _ in range(24):
+        try:
+            for _ in range(24):
+                GPIO.output(self.sck_pin, 1)
+                count = count << 1
+                GPIO.output(self.sck_pin, 0)
+                if GPIO.input(self.dt_pin):
+                    count += 1
+            # Channel A, gain 128: one extra pulse
             GPIO.output(self.sck_pin, 1)
-            count = count << 1
             GPIO.output(self.sck_pin, 0)
-            if GPIO.input(self.dt_pin):
-                count += 1
-        # Channel A, gain 128: one extra pulse
-        GPIO.output(self.sck_pin, 1)
-        GPIO.output(self.sck_pin, 0)
+        finally:
+            # Always leave SCK low so the chip can convert the next sample
+            try:
+                GPIO.output(self.sck_pin, 0)
+            except Exception:
+                pass
+
         # Sign extend 24-bit
         if count & 0x800000:
             count |= ~0xFFFFFF
         return int(count)
 
     def read_raw(self) -> float:
-        """Average raw ADC readings."""
+        """Average raw ADC readings. Raises :class:`ScaleError` on failure."""
         total = 0.0
         for _ in range(self.samples):
             total += float(self._raw_once())
         return total / self.samples
 
     def read_grams(self) -> float:
-        """Return weight in grams after offset and scale_factor."""
+        """Return weight in grams after offset and scale_factor.
+
+        Raises:
+            ScaleError: If the ADC cannot be read or scale_factor is invalid.
+        """
+        if not self.scale_factor:
+            raise ScaleError("scale_factor is zero; calibrate the scale first")
         raw = self.read_raw()
-        return (raw - self._offset) / self.scale_factor if self.scale_factor else 0.0
+        return (raw - self._offset) / self.scale_factor
 
     def tare(self) -> None:
         """Capture current raw reading as zero offset."""

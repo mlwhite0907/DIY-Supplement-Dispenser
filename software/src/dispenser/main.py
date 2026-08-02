@@ -45,11 +45,15 @@ class DispenserRuntime:
             self.hardware["stepper"],
             self.hardware["vibration"],
             config=self.config,
+            estop_sensor=self.hardware.get("estop"),
+            all_stop=self.all_stop,
         )
         self.water = WaterDoser(
             self.hardware["pump"],
             config=self.config,
             level_sensor=self.hardware.get("level"),
+            estop_sensor=self.hardware.get("estop"),
+            all_stop=self.all_stop,
         )
         self.cycle = DispenseCycle(
             powder=self.powder,
@@ -57,6 +61,8 @@ class DispenserRuntime:
             db=self.db,
             config=self.config,
             cup_sensor=self.hardware.get("cup"),
+            estop_sensor=self.hardware.get("estop"),
+            all_stop=self.all_stop,
         )
         self.calibration = CalibrationService(
             scale=self.hardware["scale"],
@@ -64,9 +70,28 @@ class DispenserRuntime:
             pump=self.hardware["pump"],
         )
 
+    def all_stop(self) -> None:
+        """Emergency stop: disable stepper, vibration off, pump stop."""
+        hw = self.hardware
+        for key, method in (
+            ("stepper", "disable"),
+            ("vibration", "off"),
+            ("pump", "stop"),
+        ):
+            obj = hw.get(key)
+            if obj is None:
+                continue
+            fn = getattr(obj, method, None)
+            if fn is None:
+                continue
+            try:
+                fn()
+            except Exception:
+                pass
+
     def close(self) -> None:
         """Release hardware resources."""
-        for key in ("scale", "stepper", "vibration", "pump", "cup", "level", "flow"):
+        for key in ("scale", "stepper", "vibration", "pump", "cup", "level", "flow", "estop"):
             obj = self.hardware.get(key)
             if obj is not None and hasattr(obj, "close"):
                 try:

@@ -10,11 +10,12 @@ Pin map: [../PINOUT.md](../PINOUT.md) · Power: [../POWER_BUDGET.md](../POWER_BU
 
 1. Store water in a **removable food-safe tank** (2–5 L target class).  
 2. Dose water into the collection cup with a **12 V peristaltic** (preferred) or diaphragm pump.  
-3. Optionally measure volume with a **pulse flow sensor**.  
-4. Interlock on **low level** via float (or capacitive) switch.  
-5. Drip tray under dispense area (mechanical).
+3. **Phase 1 dosing: open-loop timed** only (`ml_per_second` calibration).  
+4. GPIO **flow pulse pin reserved** for a future sensor path — not required for Phase 1 software.  
+5. Interlock on **low level** via float (or capacitive) switch when fitted.  
+6. Drip tray under dispense area (mechanical).
 
-Phase 1 success: repeatable water volume for a drink (timing and/or flow count) without leaks or dry-run damage.
+Phase 1 success: **calibrated timed** repeatable volume (verify with graduated cylinder) without leaks or dry-run damage — not automatic closed-loop volume.
 
 ---
 
@@ -70,18 +71,18 @@ PWM on GPIO27 at a few hundred Hz can reduce inrush; many peristaltic pumps are 
 
 ## 5. Dosing Strategies
 
-| Method | How | Pros | Cons |
-|--------|-----|------|------|
-| **Timed** | Pump ON for T ms after calibration | Simplest | Viscosity/voltage/tubing wear drift |
-| **Flow count** | N pulses ≈ volume | Better repeatability | Sensor cost, air bubbles |
-| **Hybrid** | Flow primary, time timeout | Safer | Slightly more code |
+| Method | Phase 1 status | How | Notes |
+|--------|----------------|-----|--------|
+| **Timed** | **Implemented / primary** | Pump ON for T s after calibration | Drift with head height, voltage, tube wear |
+| **Flow count** | Future (pin reserved) | N pulses ≈ volume | Not Phase 1 software |
+| **Weight-of-water** | Future | Closed-loop on HX711 Δmass | Not Phase 1 software |
 
-**Calibration:**
+**Calibration (required for open-loop accuracy):**
 
 1. Prime tubing; no air.  
-2. Dispense into graduated cylinder on scale (1 g ≈ 1 ml water).  
-3. Record `ml_per_second` and/or `pulses_per_ml`.  
-4. Store constants in software config (not hardcoded only in docs).
+2. Dispense into **graduated cylinder** (or scale, 1 g ≈ 1 ml water).  
+3. Record `ml_per_second`.  
+4. Store in software config (`hardware.pump.ml_per_second`). Re-check after tubing or tank-height changes.
 
 ---
 
@@ -199,3 +200,4 @@ Invert if your float is mounted upside-down (common).
 | Rev | Date | Notes |
 |-----|------|-------|
 | 1.0 | 2026-08-02 | Initial water system electrical module doc |
+| 1.1 | 2026-08-02 | Align with Phase 1 open-loop timed water; flow as future pin |

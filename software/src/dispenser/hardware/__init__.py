@@ -18,7 +18,10 @@ def create_hardware(cfg: dict[str, Any]) -> dict[str, Any]:
     """Instantiate hardware objects from config.
 
     Returns a dict with keys: ``scale``, ``stepper``, ``vibration``, ``pump``,
-    ``cup``, ``level``, ``flow``, ``mode``.
+    ``cup``, ``level``, ``flow``, ``estop``, ``mode``.
+
+    Optional sensors (``cup_enabled``, ``level_enabled``, ``estop_enabled``) are
+    set to ``None`` when disabled in config.
     """
     if is_sim_mode(cfg):
         from dispenser.hardware.sim import (
@@ -35,6 +38,7 @@ def create_hardware(cfg: dict[str, Any]) -> dict[str, Any]:
         pump_cfg = hw.get("pump", {})
         powder_cfg = dosing.get("powder", {})
         water_cfg = dosing.get("water", {})
+        sensors = hw.get("sensors", {})
 
         scale = SimScale(
             noise_g=float(scale_cfg.get("sim_noise_g", 0.02)),
@@ -47,12 +51,20 @@ def create_hardware(cfg: dict[str, Any]) -> dict[str, Any]:
                 water_cfg.get("sim_ml_per_second", pump_cfg.get("ml_per_second", 25.0))
             )
         )
-        sensors = hw.get("sensors", {})
-        cup = SimDigitalSensor(name="cup", initial=True)
-        level = SimDigitalSensor(name="level", initial=True)  # water present
+
+        cup_enabled = bool(sensors.get("cup_enabled", True))
+        level_enabled = bool(sensors.get("level_enabled", True))
+        estop_enabled = bool(sensors.get("estop_enabled", True))
+
+        cup = SimDigitalSensor(name="cup", initial=True) if cup_enabled else None
+        # level: True = water present / OK
+        level = SimDigitalSensor(name="level", initial=True) if level_enabled else None
         flow = SimDigitalSensor(name="flow", initial=False)
-        # store refs for tests
-        _ = sensors
+        # estop: False = not pressed (active when True)
+        estop = (
+            SimDigitalSensor(name="estop", initial=False) if estop_enabled else None
+        )
+
         return {
             "scale": scale,
             "stepper": stepper,
@@ -61,6 +73,7 @@ def create_hardware(cfg: dict[str, Any]) -> dict[str, Any]:
             "cup": cup,
             "level": level,
             "flow": flow,
+            "estop": estop,
             "mode": "sim",
         }
 
@@ -100,21 +113,47 @@ def create_hardware(cfg: dict[str, Any]) -> dict[str, Any]:
         pin=int(pump_cfg.get("pin", 27)),
         ml_per_second=float(pump_cfg.get("ml_per_second", 25.0)),
     )
-    cup = GpioDigitalSensor(
-        pin=int(sens_cfg.get("cup_pin", 24)),
-        active_high=bool(sens_cfg.get("cup_active_high", True)),
-        name="cup",
-    )
-    level = GpioDigitalSensor(
-        pin=int(sens_cfg.get("level_pin", 23)),
-        active_high=bool(sens_cfg.get("level_active_high", False)),
-        name="level",
-    )
+
+    cup_enabled = bool(sens_cfg.get("cup_enabled", True))
+    level_enabled = bool(sens_cfg.get("level_enabled", True))
+    estop_enabled = bool(sens_cfg.get("estop_enabled", True))
+
+    cup = None
+    if cup_enabled:
+        cup = GpioDigitalSensor(
+            pin=int(sens_cfg.get("cup_pin", 24)),
+            active_high=bool(sens_cfg.get("cup_active_high", True)),
+            name="cup",
+        )
+
+    level = None
+    if level_enabled:
+        # active_high True: HIGH means water present / OK
+        level = GpioDigitalSensor(
+            pin=int(sens_cfg.get("level_pin", 23)),
+            active_high=bool(sens_cfg.get("level_active_high", True)),
+            name="level",
+        )
+
     flow = GpioDigitalSensor(
         pin=int(sens_cfg.get("flow_pin", 22)),
         active_high=True,
         name="flow",
     )
+
+    estop = None
+    if estop_enabled:
+        # NC to GND, pull-up: active-low hardware → active_high=False so
+        # read()==True when pressed (line pulled low / open circuit depending on wiring).
+        # estop_active_low: true means asserted when pin is LOW.
+        estop_active_low = bool(sens_cfg.get("estop_active_low", True))
+        estop = GpioDigitalSensor(
+            pin=int(sens_cfg.get("estop_pin", 25)),
+            active_high=not estop_active_low,
+            pull_up=True,
+            name="estop",
+        )
+
     return {
         "scale": scale,
         "stepper": stepper,
@@ -123,6 +162,7 @@ def create_hardware(cfg: dict[str, Any]) -> dict[str, Any]:
         "cup": cup,
         "level": level,
         "flow": flow,
+        "estop": estop,
         "mode": "pi",
     }
 

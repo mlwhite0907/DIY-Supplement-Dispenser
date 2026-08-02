@@ -8,12 +8,13 @@ Start here if you are new to the project.
 | [BOM.md](BOM.md) | Quantities, cost ranges, print vs buy |
 | [BOM_AMAZON.md](BOM_AMAZON.md) | Amazon search keywords, example ASINs, cart strategy |
 | [SHOPPING_CHECKLIST.md](SHOPPING_CHECKLIST.md) | Printable order checklist |
-| [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) | Blocks, control loops, failure modes |
-| [SOFTWARE_ARCHITECTURE.md](SOFTWARE_ARCHITECTURE.md) | Layers, state machine, modules |
-| [ASSEMBLY_GUIDE.md](ASSEMBLY_GUIDE.md) | Bench build through first full drink |
-| [TESTING_PROTOCOL.md](TESTING_PROTOCOL.md) | Calibration and acceptance tests |
+| [SYSTEM_ARCHITECTURE.md](SYSTEM_ARCHITECTURE.md) | Blocks, open-loop water, powder loop, failure modes |
+| [SOFTWARE_ARCHITECTURE.md](SOFTWARE_ARCHITECTURE.md) | Layers, real modules (`PowderDoser`, `WaterDoser`, `DispenseCycle`) |
+| [ASSEMBLY_GUIDE.md](ASSEMBLY_GUIDE.md) | Bench build through first full drink (BCM pin map, v0.2 auger) |
+| [TESTING_PROTOCOL.md](TESTING_PROTOCOL.md) | Calibration and acceptance tests (±0.1 g goal; timed water) |
 | [SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md) | Food-contact, cleaning, disclaimers |
-| [PHASE1_DESIGN_HANDOFF.md](PHASE1_DESIGN_HANDOFF.md) | Locked CAD dimensions for powder module |
+| [PHASE1_DESIGN_HANDOFF.md](PHASE1_DESIGN_HANDOFF.md) | Locked CAD dimensions (~450+ ml hopper, v0.2 stack-up) |
+| [images/README.md](images/README.md) | Assembly photos TBD |
 
 ## Diagrams (Mermaid sources)
 

@@ -3,7 +3,15 @@
 **Print this page** and check items as you add them to cart or receive them.  
 **Details & prices:** [BOM.md](BOM.md) · **Amazon keywords / ASINs:** [BOM_AMAZON.md](BOM_AMAZON.md)
 
-**Rule:** Finish **Phase 1 MVP** and prove ±0.1 g powder dosing before buying multi-station bulk.
+**Rule:** Finish **Phase 1 MVP** and prove ±0.1 g powder dosing before buying multi-station bulk.  
+**Honest MVP budget:** ~**$250–500** parts (verify live prices). Example ASINs = **verify listing**.
+
+> **⚠ Shopping traps (check while adding to cart)**  
+> - **TMC2209:** common ASINs are **printer stepsticks** — need a carrier/breakout **or** careful pin wiring; **not** plug-and-play on Pi. Search `TMC2209 standalone` / `stepstick expansion board` as alternatives. Watch multipack unit price.  
+> - **Load cell:** on multi-range kits (e.g. B07BGS58TL), **select 5 kg** — default often **20 kg** (worse resolution). Real dims may be ~76×13.5 mm vs CAD ~80×12.7 — verify **M4/M5** holes.  
+> - **Vibe motor:** electrical default is **5 V** coin motor on MOSFET from **5 V rail** — not 3 V. Use 3 V only with series resistor or 3 V supply.  
+> - **12 V PSU:** **5 A is enough for Phase 1**; **10 A** = multi-station headroom later (not required for MVP).  
+> - **PETG prints:** DIY provisional food-adjacent only — **not** certified food equipment. See [SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md).
 
 ---
 
@@ -21,11 +29,11 @@
 ### Powder dosing (1 station)
 
 - [ ] NEMA17 stepper (1.5–2 A, body ≥40 mm, 5 mm shaft)
-- [ ] TMC2209 driver module
-- [ ] 5 kg bar load cell
+- [ ] TMC2209 driver (**stepstick form** common) — plan **carrier/breakout or pin wiring**; **not** a Pi plug-and-play module; or search standalone/expansion board
+- [ ] **5 kg** bar load cell — **confirm 5 kg selected** (not 20 kg default); measure holes after arrival
 - [ ] HX711 amplifier board (spares nice)
-- [ ] Coin vibration motors Ø10–12 × ~3 mm (buy a small pack)
-- [ ] Logic-level MOSFET module for vibration motor
+- [ ] Coin vibration motors Ø10–12 × ~3 mm, prefer **5 V** (small pack) — MOSFET from **5 V rail**
+- [ ] Logic-level MOSFET module for vibration motor (GPIO = control only)
 - [ ] Optional: 5 mm shaft coupler (if not using printed coupling)
 
 ### Water system
@@ -39,15 +47,15 @@
 
 ### Power (12 V rail)
 
-- [ ] 12 V switching PSU ≥10 A (15 A nicer)
+- [ ] 12 V switching PSU — **5 A Phase 1 enough** / **10 A future** multi-station headroom (not required for MVP)
 - [ ] Terminal / distribution block
-- [ ] Inline fuse holder + appropriate fuse
+- [ ] Inline fuse holder + appropriate fuse (size to PSU, e.g. ~5 A Phase 1)
 - [ ] Hookup wire (18 AWG power, 22 AWG signal)
 
 ### Fasteners & smalls
 
 - [ ] M3 screw/nut/washer assortment
-- [ ] M4 screws/nuts (many load cells use M4)
+- [ ] M4 and/or M5 screws/nuts (load cells vary — **verify hole size**)
 - [ ] Optional M2 for vibe motor clips / tiny mounts
 - [ ] Calibration weight **or** plan to use known kitchen weights
 
@@ -57,11 +65,11 @@
 
 ### 3D printed (not Amazon — your printer)
 
-- [ ] `powder_hopper` (PETG)
+- [ ] `powder_hopper` (PETG — **DIY provisional**, not certified food equipment)
 - [ ] `auger_housing` + outlet (PETG)
 - [ ] `auger_screw` (print 2 pitch variants if possible)
 - [ ] Module stand / feet
-- [ ] Load-cell cup platform
+- [ ] Load-cell cup platform (adjust after measuring real cell ~76×13.5 vs ~80×12.7)
 
 ---
 
@@ -98,14 +106,14 @@
 ### Per additional powder station (repeat)
 
 - [ ] NEMA17 1.5–2 A
-- [ ] TMC2209 module
-- [ ] Coin vibration motor(s)
+- [ ] TMC2209 (same stepstick/carrier plan as Phase 1)
+- [ ] Coin vibration motor(s) (**5 V** default)
 - [ ] MOSFET channel for vibe
-- [ ] Printed hopper + auger + housing set (PETG)
+- [ ] Printed hopper + auger + housing set (PETG — DIY provisional)
 
 ### Shared Phase 2
 
-- [ ] Higher-capacity 12 V PSU if needed (15–30 A class)
+- [ ] Step up 12 V PSU if needed (**10 A+** class; 15–30 A for many stations)
 - [ ] Multi-channel MOSFET / relay board
 - [ ] Frame / rails for multiple modules (print or extrusion)
 - [ ] Extra wire, terminals, fusing as required
@@ -136,13 +144,14 @@
 
 | Have? | Item | Notes |
 |:-----:|------|-------|
-| [ ] | **PETG** filament (primary) | Preferred for hoppers / auger — tough, dishwasher-friendly enough for DIY clean |
+| [ ] | **PETG** filament (primary) | Preferred for hoppers / auger — tough, DIY-cleanable; **not certified food equipment** |
 | [ ] | PLA (optional) | OK for jigs, stands, non-food fixtures |
 | [ ] | Avoid ABS for first **FC** prototypes | Warping + fumes; not first choice for powder path |
 | [ ] | Spare nozzles / glue stick / bed prep | Per your printer (e.g. Bambu) |
 | [ ] | Light sandpaper or reamer | Smooth auger bore if needed |
 
-**Food-contact reminder:** Powder-contact prints should be smooth, washable, and removable. This is home DIY hygiene practice, not a commercial food cert.
+> **⚠ Food-contact / PETG**  
+> Powder-contact prints should be smooth, washable, and removable. PETG is **DIY provisional** only — **not** NSF/commercial food equipment. Full rules: **[SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md)**.
 
 ---
 
@@ -151,20 +160,23 @@
 - [ ] Tank is food-safe material and fully washable
 - [ ] Pump + tubing marketed food-grade / beverage / silicone wet path
 - [ ] Check valves / QDs food-grade
-- [ ] Powder path parts printed in PETG (or better), no mystery filament
+- [ ] Powder path parts printed in PETG (or better), no mystery filament — **DIY provisional**, not certified food equipment
 - [ ] Electronics kept dry / separated from splash zone
 - [ ] You can completely empty and wipe hopper + barrel
+- [ ] Read [SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md) before first edible drink
 
 ---
 
 ## Receive & smoke-test checklist
 
 - [ ] All packages inventory-checked against this list  
+- [ ] Load cell is **5 kg** (not accidental 20 kg) and hole pattern measured  
+- [ ] TMC2209 wired via carrier **or** correct stepstick pins (VMOT/GND/VIO/STEP/DIR/EN/coils)  
 - [ ] 12 V PSU outputs ~12 V **before** connecting motors  
 - [ ] Pi boots from microSD  
 - [ ] HX711 reads and calibrates with known weight  
 - [ ] NEMA17 steps (low current first) with auger free  
-- [ ] Vibration motor runs via MOSFET  
+- [ ] Vibration motor runs via MOSFET from **5 V** (or 3 V only if resistor/supply planned)  
 - [ ] Pump primes with water into a cup (watch for leaks)  
 - [ ] Only then: powder in hopper + closed-loop dose tests  
 
@@ -188,6 +200,7 @@
 ## Related docs
 
 - [BOM.md](BOM.md) — quantities, price ranges, power budget  
-- [BOM_AMAZON.md](BOM_AMAZON.md) — search terms, example ASINs, cart strategy  
+- [BOM_AMAZON.md](BOM_AMAZON.md) — search terms, example ASINs, shopping traps  
+- [SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md) — food-contact, PETG provisional, cleaning  
 - [PROJECT_PLAN.md](PROJECT_PLAN.md) — phase goals  
 - [PHASE1_DESIGN_HANDOFF.md](PHASE1_DESIGN_HANDOFF.md) — hopper/auger design targets  

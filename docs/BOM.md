@@ -19,9 +19,16 @@
 | Tag | Meaning |
 |-----|---------|
 | **Buy** | Purchase off-the-shelf |
-| **3D** | Print yourself (PETG preferred for food-adjacent parts) |
+| **3D** | Print yourself (PETG preferred for food-adjacent parts — **DIY provisional**, not certified food equipment; see [SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md)) |
 | **FC** | Food-contact or food-adjacent — choose food-safe materials / grades |
 | **Opt** | Optional for Phase 1 |
+
+> **⚠ Shopping traps (read before Amazon):**  
+> 1. **TMC2209 ASINs** often ship as bare **printer stepsticks** — not a Pi-ready module; need a carrier/breakout or careful pin wiring.  
+> 2. **Load-cell kits** often default to **20 kg** — you must select the **5 kg** variant.  
+> 3. **Vibe motors:** electrical default is **5 V** from the 5 V rail via MOSFET — not 3 V.  
+> 4. **12 V PSU:** **5 A is enough for Phase 1 MVP**; 10 A is headroom for multi-station later.  
+> 5. Example ASINs drift — **verify listing** title, rating, and options before buy. Details: [BOM_AMAZON.md](BOM_AMAZON.md).
 
 ---
 
@@ -46,11 +53,11 @@ Goal: one powder hopper + auger + vibration + HX711 cup scale + refillable tank 
 | Qty | Item | Category | Purpose | Buy/3D | ~USD | Notes |
 |-----|------|----------|---------|--------|------|-------|
 | 1 | NEMA17 stepper, 1.5–2.0 A, body ≥40 mm, 5 mm shaft | Actuation | Drive auger | Buy | 12–25 | Prefer dual-shaft only if useful; single is fine |
-| 1 | TMC2209 stepper driver module (UART or STEP/DIR) | Driver | Quiet, accurate microstepping | Buy | 8–15 | BIGTREETECH-style modules common |
-| 1 | 5 kg bar load cell (rectangular, bathroom-scale style) | Sensing | Weigh cup for closed-loop powder | Buy | 5–12 | Standard ~12.7 × 12.7 × 80 mm form factor |
+| 1 | TMC2209 stepper driver (**stepstick form factor** common) | Driver | Quiet, accurate microstepping | Buy | 8–15 | **⚠ Not plug-and-play on Pi** — see callout below |
+| 1 | **5 kg** bar load cell (rectangular, bathroom-scale style) | Sensing | Weigh cup for closed-loop powder | Buy | 5–12 | **Must select 5 kg** (kits often default 20 kg); dims may be ~76×13.5 mm vs CAD ~80×12.7 — verify M4/M5 holes |
 | 1 | HX711 amplifier board (or kit with load cell) | Sensing | Load-cell ADC → Pi GPIO | Buy | 3–10 | Buy spare; cheap and useful |
-| 2–5 | Coin vibration motors Ø10–12 mm × ~3 mm, 3 V | Actuation | Anti-clog / anti-bridge on hopper | Buy | 5–12 | Pack of 10 is cheapest; FC-adjacent housing only |
-| 1 | Logic-level MOSFET module (or opto MOSFET) for vibe | Switching | Drive vibration motor from 3.3 V GPIO | Buy | 5–10 | Or share a multi-channel MOSFET board |
+| 2–5 | Coin vibration motors Ø10–12 mm × ~3 mm, **5 V default** | Actuation | Anti-clog / anti-bridge on hopper | Buy | 5–12 | Drive from **5 V rail** via MOSFET. 3 V motors only with series resistor or dedicated 3 V — **not** the electrical default |
+| 1 | Logic-level MOSFET module (or opto MOSFET) for vibe | Switching | Drive vibration motor from 3.3 V GPIO | Buy | 5–10 | Switch **motor supply** (5 V default); GPIO is only the gate/control |
 | 1 | 5 mm shaft coupler / flex coupler (optional) | Mechanical | Auger ↔ NEMA17 if not direct-drive print | Buy | 4–8 | Printed coupling often enough for Phase 1 |
 | 1 | Powder hopper (steep cone, 65° walls) | Mechanical | Hold powder | **3D** | filament | See design handoff; **FC** after post-process |
 | 1 | Auger housing + outlet nozzle | Mechanical | Meter powder | **3D** | filament | **FC**-adjacent |
@@ -59,7 +66,17 @@ Goal: one powder hopper + auger + vibration + HX711 cup scale + refillable tank 
 | 1 | Load-cell cup platform / holder | Mechanical | Mount 5 kg cell + cup | **3D** | filament | Match cell hole pattern |
 
 **Subtotal powder (bought parts only):** ~**$45–90**  
-**Printed parts:** use PETG from inventory (~50–150 g for first module set)
+**Printed parts:** use PETG from inventory (~50–150 g for first module set). PETG is **DIY provisional** food-adjacent material — not certified food equipment. See [SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md).
+
+> **⚠ TMC2209 shopping trap**  
+> Common Amazon ASINs (e.g. B07ZQ3C1XW / B08SMDY3SQ — **verify listing**) are **3D-printer stepsticks** (SilentStepStick form factor). They are **NOT** a ready-made “Pi hat” module. You need either:  
+> - a **stepstick expansion / carrier board** (or 3D-printer control board footprint), **or**  
+> - **careful pin wiring** (VMOT, GND, VIO, STEP, DIR, EN, motor coils) with correct logic voltage.  
+> **Alternatives to search:** `TMC2209 standalone`, `TMC2209 breakout`, `stepstick expansion board`.  
+> **Multipack pricing:** multipacks look cheap per unit — fine for Phase 2, but don’t over-buy before one station works. Confirm you’re not paying “5-pack price” for a single-use need without checking unit cost.
+
+> **⚠ Load cell (e.g. B07BGS58TL — verify listing)**  
+> On multi-range kits, **select the 5 kg option** explicitly. Default is often **20 kg**, which has **worse resolution** for ±0.1 g powder dosing. Real bar cells may measure ~**76 × 13.5 mm** while CAD / handoff often assumes ~**80 × 12.7 mm** — **measure hole spacing (M4 or M5)** and adjust the printed cup platform.
 
 ### 1.3 Water system (refillable tank)
 
@@ -98,12 +115,12 @@ Goal: one powder hopper + auger + vibration + HX711 cup scale + refillable tank 
 
 | Qty | Item | Category | Purpose | Buy/3D | ~USD | Notes |
 |-----|------|----------|---------|--------|------|-------|
-| 1 | 12 V switching PSU, **≥10 A** (15 A nicer) | Power | Steppers, pump, vibe (if 12 V), relays | Buy | 20–40 | Mean Well–class quality preferred over no-name |
-| 1 | Terminal block / distribution board | Wiring | Clean 12 V / GND distribution | Buy | 6–15 | |
-| 1 | Inline fuse holder + fuse (on 12 V) | Safety | Short protection | Buy | 3–8 | Size to PSU / load (e.g. 5–10 A) |
+| 1 | 12 V switching PSU, **5 A Phase 1 / 10 A future** | Power | Stepper VMOT + pump (vibe on **5 V**, not 12 V) | Buy | 15–40 | **Phase 1 MVP: 12 V 5 A is enough.** 10 A = headroom for multi-station later, not required for MVP |
+| 1 | Terminal block / distribution board | Wiring | Clean 12 V / GND (+ optional 5 V aux) distribution | Buy | 6–15 | |
+| 1 | Inline fuse holder + fuse (on 12 V) | Safety | Short protection | Buy | 3–8 | Size to PSU / load (e.g. 5 A Phase 1; 10 A if using larger PSU) |
 | — | Hookup wire 18–22 AWG, assorted | Wiring | Power + signal | Buy | 8–15 | |
 
-**Subtotal power:** ~**$40–80**
+**Subtotal power:** ~**$30–80** (5 A brick often cheaper; 10 A still fine if you already plan Phase 2)
 
 ### 1.6 Fasteners & misc (MVP)
 
@@ -123,13 +140,13 @@ Goal: one powder hopper + auger + vibration + HX711 cup scale + refillable tank 
 | Powder dosing (electronics) | 45–90 |
 | Water system | 50–120 |
 | Mixing | 0–5 |
-| Power distribution | 40–80 |
+| Power distribution | 30–80 |
 | Fasteners / smalls | 10–30 |
-| **MVP grand total (parts)** | **~$245–485** |
+| **MVP grand total (parts)** | **~$250–500** |
 | Filament (PETG, first module) | 5–15 of filament cost |
 | Tools you may already own | 0–50 |
 
-> Order **MVP first**. Do not buy 12 steppers or a full enclosure until ±0.1 g powder dosing works with real creatine / protein.
+> Order **MVP first**. Do not buy 12 steppers or a full enclosure until ±0.1 g powder dosing works with real creatine / protein. Honest Phase 1 MVP envelope: **~$250–500** parts (verify live prices).
 
 ---
 
@@ -209,7 +226,7 @@ After Phase 1 success criteria (reliable flow + ±0.1 g), scale powder stations.
 
 ## 4. 3D printed vs bought (summary)
 
-### Print (PETG recommended; food-adjacent)
+### Print (PETG recommended; food-adjacent — DIY provisional)
 
 | Part | Phase | Food-contact notes |
 |------|-------|--------------------|
@@ -220,6 +237,9 @@ After Phase 1 success criteria (reliable flow + ±0.1 g), scale powder stations.
 | Tank adapters, drip tray, mixer mounts | 1–2 | **FC** where water/powder touch |
 | Multi-module frame, panels | 2+ | Mostly structural |
 | Pill module bodies | 2+ | **FC** for dose path |
+
+> **⚠ Food contact / PETG**  
+> Printed PETG (and PLA) parts are **DIY provisional** only — they are **not** certified food equipment (not NSF/commercial). Prefer smooth walls, washability, and materials you’d accept for kitchen DIY gadgets. Full hygiene rules, cleaning, and disclaimers: **[SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md)**.
 
 **Avoid** for food path: ABS fumes/warping for first prototypes; recycled mystery filament for powder-contact surfaces.
 
@@ -243,10 +263,10 @@ After Phase 1 success criteria (reliable flow + ±0.1 g), scale powder stations.
 | Touchscreen | 7" HDMI capacitive ~$50–70 | 10" IPS capacitive ~$90–120 | Defer screen until powder works if saving cash |
 | Stepper | Generic 42N·cm NEMA17 ~$12 | Name-brand low-backlash ~$25 | Generic fine for auger |
 | Driver | A4988 / DRV8825 ~$3–5 | **TMC2209** ~$8–15 | TMC strongly preferred (quiet, less resonance) |
-| Load cell | 5 kg bar bare ~$5 | Kit with HX711 + acrylic plates ~$12–20 | Kit saves mount design time |
+| Load cell | **5 kg** bar bare ~$5 | Kit with HX711 + acrylic plates ~$12–20 | **Select 5 kg**, not 20 kg default; kit saves mount time |
 | Water pump | Cheap 12 V diaphragm ~$15 | Food-grade peristaltic silicone ~$25–40 | Peristaltic = better hygiene story |
 | Water volume | Timed pump | YF-S201 + calibration | Sensor worth it by Full Phase 1 |
-| 12 V PSU | No-name 12 V 10 A ~$20 | Mean Well LRS-150/200-12 ~$30–45 | Better ripple and longevity |
+| 12 V PSU | No-name **12 V 5 A** ~$15–25 (Phase 1 OK) | Mean Well LRS-150/200-12 (~10–15 A) ~$30–45 | **5 A Phase 1 / 10 A future**; quality > raw amps for MVP |
 | Mixing | Manual swirl | Dedicated stir motor + printed paddle | Hygiene: removable paddle |
 | Wiring | Breadboard forever | Screw terminals + ferrules | Reliability |
 
@@ -273,11 +293,11 @@ Assumptions: Phase 1 Full (1× NEMA17, 1× pump, 1× vibe, Pi 5, screen). Steppe
 | NEMA17 @ ~1.5 A RMS (chopper) | ~1.5–2.0 A | Short bursts while dosing |
 | TMC2209 + logic | included above | Set `I_run` appropriately |
 | 12 V pump (peristaltic / diaphragm) | 0.5–2.0 A | Seconds per drink |
-| Coin vibe motor (if driven 5 V from buck or 3 V) | 0.05–0.2 A | Often **not** on 12 V — use 3–5 V via MOSFET |
+| Coin vibe motor (**5 V default** via MOSFET) | 0.05–0.2 A | On **5 V rail**, not 12 V. 3 V motors only with series resistor / 3 V supply |
 | Solenoid (if used) | 0.3–1.0 A | Short open time |
 | Relay coils / MOSFET boards | < 0.1 A | |
-| **Phase 1 continuous-ish peak** | **~3–5 A** | **10 A PSU is comfortable** |
-| **Phase 2 (4 steppers, not all simultaneous)** | **~5–10 A** | Size for worst-case simultaneous moves |
+| **Phase 1 continuous-ish peak** | **~3–5 A @ 12 V** | **12 V 5 A is enough for Phase 1**; 10 A = future multi-station headroom |
+| **Phase 2 (4 steppers, not all simultaneous)** | **~5–10 A** | Size for worst-case simultaneous moves; step up to **10 A+** here |
 | **Phase 2 (12 stations, sequenced)** | **~8–15 A** | Sequence motors; 15–20 A PSU headroom |
 
 ### Power design rules
@@ -286,15 +306,16 @@ Assumptions: Phase 1 Full (1× NEMA17, 1× pump, 1× vibe, Pi 5, screen). Steppe
 2. Common **GND** between Pi and 12 V system (required for logic-level MOSFETs / STEP signals).  
 3. Fuse the 12 V positive near the PSU.  
 4. Use flyback diodes / modules with built-in protection on inductive loads (pumps, solenoids).  
-5. Set TMC2209 current so the motor is strong enough but not scorching hot.
+5. Set TMC2209 current so the motor is strong enough but not scorching hot.  
+6. **Vibe motor:** default **5 V coin motor** switched by MOSFET from a 5 V rail (Pi USB/buck/aux — not the Pi’s GPIO pin current). Use 3 V motors only with a series resistor or a regulated 3 V supply.
 
 ### Quick reference table
 
 | Rail | Source | Phase 1 recommend | Phase 2 (multi) recommend |
 |------|--------|-------------------|---------------------------|
 | 5 V (Pi) | Official 27W USB-C | 27W | 27W (unchanged) |
-| 5 V (aux / vibe) | Buck from 12 V or USB | 3 A buck optional | Multi-rail distribution |
-| 12 V | Switching PSU | **10 A min, 15 A nice** | **15–30 A** depending on concurrency |
+| 5 V (aux / vibe) | Buck from 12 V, USB, or shared 5 V | **Default for coin vibe** | Multi-rail distribution |
+| 12 V | Switching PSU | **5 A enough for MVP**; 10 A optional headroom | **10–30 A** depending on concurrency |
 
 ---
 
@@ -306,18 +327,20 @@ Mark these as **FC** when shopping:
 - [ ] Pump labeled food-grade / beverage / with silicone tubing  
 - [ ] Silicone tubing platinum-cure or explicitly food-grade  
 - [ ] Check valves / QD fittings food-grade  
-- [ ] Printed powder path: PETG, smooth walls, removable for wash  
+- [ ] Printed powder path: PETG (or better), smooth walls, removable for wash  
 - [ ] No bare copper/brass in long-term wet path unless known potable-safe  
 - [ ] Drip tray emptyable; no standing water near electronics  
 - [ ] Design for dry powder side vs wet water side separation  
 
-This machine is a **home DIY project**, not a certified commercial food appliance. Use common sense: clean regularly, don’t leave wet powder sludge in hoppers, and prefer materials you’d accept for kitchen DIY gadgets.
+> **⚠ PETG / printed parts are DIY provisional**  
+> This machine is a **home DIY project**, **not** certified commercial food equipment. PETG is a practical prototype material — washable and durable enough for kitchen-style DIY — but it is **not** an NSF/food-service certification. Use common sense: clean regularly, don’t leave wet powder sludge in hoppers, and prefer materials you’d accept for kitchen DIY gadgets.  
+> **Full rules:** [SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md).
 
 ---
 
 ## 8. Suggested buy order
 
-1. **Week 1 – prove powder:** Pi (if needed), HX711 + 5 kg cell, NEMA17, TMC2209, vibe motors, MOSFET, 12 V PSU, fasteners, PETG filament → print hopper/auger.  
+1. **Week 1 – prove powder:** Pi (if needed), HX711 + **5 kg** cell (not 20 kg), NEMA17, TMC2209 (+ carrier or pin plan), **5 V** vibe motors + MOSFET, **12 V 5 A** PSU (10 A OK if preferred), fasteners, PETG filament → print hopper/auger.  
 2. **Week 2 – add water:** tank, peristaltic + silicone + check valves, pump MOSFET/relay.  
 3. **Week 3 – refine:** flow sensor, level sensor, cup sensor, mix motor, leave breadboard.  
 4. **When boringly reliable:** touchscreen UI, nicer wiring, then Phase 2 extra stations.
@@ -328,13 +351,13 @@ This machine is a **home DIY project**, not a certified commercial food applianc
 
 | Configuration | Approximate parts cost (USD) |
 |---------------|------------------------------|
-| Phase 1 MVP | **$245–485** |
+| Phase 1 MVP | **~$250–500** |
 | Full Phase 1 (MVP + niceties) | **$350–750** |
 | + 3 extra powder stations (4 total) | **+$125–270** |
 | Path toward ~12 powder stations (add-on envelope) | **+$400–950** |
 | Filament (prototype iterations) | **$20–60** over several revisions |
 
-Prices fluctuate; **verify on Amazon / vendors before ordering**. See [BOM_AMAZON.md](BOM_AMAZON.md) for search keywords, example ASINs, and cart strategy, and [SHOPPING_CHECKLIST.md](SHOPPING_CHECKLIST.md) for printable checkboxes.
+Prices fluctuate; **verify on Amazon / vendors before ordering**. Example ASINs are **“verify listing”** only. See [BOM_AMAZON.md](BOM_AMAZON.md) for search keywords, shopping traps, and cart strategy, and [SHOPPING_CHECKLIST.md](SHOPPING_CHECKLIST.md) for printable checkboxes.
 
 ---
 
@@ -344,3 +367,4 @@ Prices fluctuate; **verify on Amazon / vendors before ordering**. See [BOM_AMAZO
 - [PHASE1_DESIGN_HANDOFF.md](PHASE1_DESIGN_HANDOFF.md) – hopper / auger dimensions  
 - [BOM_AMAZON.md](BOM_AMAZON.md) – Amazon shopping guide  
 - [SHOPPING_CHECKLIST.md](SHOPPING_CHECKLIST.md) – Phase 1 / Phase 2 checklists  
+- [SAFETY_AND_HYGIENE.md](SAFETY_AND_HYGIENE.md) – food-contact, PETG provisional, cleaning  

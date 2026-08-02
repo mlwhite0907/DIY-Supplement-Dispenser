@@ -6,7 +6,8 @@ import pytest
 
 from dispenser.control.powder_dose import PowderDoser
 from dispenser.control.scale_service import ScaleService
-from dispenser.hardware.sim import SimScale, SimStepper, SimVibration
+from dispenser.control.water_dose import WaterDoser
+from dispenser.hardware.sim import SimDigitalSensor, SimPump, SimScale, SimStepper, SimVibration
 
 
 def _fast_powder_cfg() -> dict:
@@ -30,10 +31,15 @@ def _fast_powder_cfg() -> dict:
 
 
 @pytest.fixture()
-def doser() -> PowderDoser:
+def vibe() -> SimVibration:
+    return SimVibration(scale=None, boost=1.2)
+
+
+@pytest.fixture()
+def doser(vibe: SimVibration) -> PowderDoser:
     scale = SimScale(noise_g=0.0, grams_per_second=4.0)
     stepper = SimStepper(scale=scale)
-    vibe = SimVibration(scale=scale, boost=1.2)
+    vibe.attach_scale(scale)
     svc = ScaleService(scale, samples=1)
     return PowderDoser(svc, stepper, vibe, config=_fast_powder_cfg())
 
@@ -60,8 +66,38 @@ def test_dose_rejects_non_positive(doser: PowderDoser) -> None:
     assert not result.success
 
 
+def test_vibe_off_after_dose(doser: PowderDoser, vibe: SimVibration) -> None:
+    """Vibration must be off after a successful dose completes."""
+    result = doser.dose(2.0, ingredient="creatine")
+    assert result.success, result.message
+    assert vibe._on is False
+
+
+def test_vibe_off_after_jam() -> None:
+    """Vibration must be off even when dosing fails on jam."""
+
+    class StuckScale(SimScale):
+        def add_grams(self, grams: float) -> None:
+            if grams < 0:
+                super().add_grams(grams)
+
+    scale = StuckScale(noise_g=0.0, grams_per_second=4.0)
+    stepper = SimStepper(scale=scale)
+    vibe = SimVibration(scale=scale)
+    svc = ScaleService(scale, samples=1)
+    cfg = _fast_powder_cfg()
+    cfg["dosing"]["powder"]["jam_window_seconds"] = 0.02
+    cfg["dosing"]["powder"]["timeout_seconds"] = 10.0
+    cfg["dosing"]["powder"]["max_jam_retries"] = 0
+    doser = PowderDoser(svc, stepper, vibe, config=cfg)
+    result = doser.dose(5.0)
+    assert not result.success
+    assert vibe._on is False
+    assert "jam" in result.message.lower()
+
+
 def test_jam_detection_when_no_progress() -> None:
-    """Scale that never gains mass → jam after retries."""
+    """Scale that never gains mass → jam after retries (message must say jam)."""
 
     class StuckScale(SimScale):
         def add_grams(self, grams: float) -> None:
@@ -74,10 +110,28 @@ def test_jam_detection_when_no_progress() -> None:
     vibe = SimVibration(scale=scale)
     svc = ScaleService(scale, samples=1)
     cfg = _fast_powder_cfg()
-    cfg["dosing"]["powder"]["jam_window_seconds"] = 0.05
-    cfg["dosing"]["powder"]["timeout_seconds"] = 5.0
-    cfg["dosing"]["powder"]["max_jam_retries"] = 1
+    # Fast jam: short window, no retries, long enough timeout so jam wins
+    cfg["dosing"]["powder"]["jam_window_seconds"] = 0.02
+    cfg["dosing"]["powder"]["timeout_seconds"] = 30.0
+    cfg["dosing"]["powder"]["max_jam_retries"] = 0
+    cfg["dosing"]["powder"]["jam_min_progress_g"] = 0.05
     doser = PowderDoser(svc, stepper, vibe, config=cfg)
     result = doser.dose(5.0)
     assert not result.success
-    assert "jam" in result.message.lower() or "timeout" in result.message.lower()
+    assert "jam" in result.message.lower(), result.message
+
+
+def test_water_dose_open_loop_message() -> None:
+    """Water dose success message mentions estimated / open-loop / timed."""
+    pump = SimPump(ml_per_second=50.0)
+    level = SimDigitalSensor("level", initial=True)
+    water = WaterDoser(
+        pump,
+        config={"dosing": {"water": {"tolerance_ml": 5.0}}},
+        level_sensor=level,
+    )
+    result = water.dose(40.0)
+    assert result.success, result.message
+    msg = result.message.lower()
+    assert "estimated" in msg or "open-loop" in msg or "timed" in msg, result.message
+    assert abs(result.actual - 40.0) < 0.01

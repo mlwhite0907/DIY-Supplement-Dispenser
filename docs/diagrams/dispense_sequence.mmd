@@ -1,63 +1,57 @@
-%% Closed-loop powder + water dispense sequence (Phase 1)
+%% Closed-loop powder + open-loop timed water (Phase 1)
 %% Render with Mermaid
 
 sequenceDiagram
   autonumber
   actor User
-  participant UI as UI / CLI
-  participant Orch as Orchestrator
+  participant UI as CLI / local API
+  participant Orch as DispenseCycle
   participant Scale as HX711 Scale
   participant Auger as Auger + Stepper
-  participant Vibe as Vibration
-  participant Pump as Water Pump
-  participant Mix as Mixer
+  participant Vibe as Vibration pulses
+  participant Pump as Water Pump timed
 
-  User->>UI: Select recipe / target grams + ml
-  UI->>Orch: start_dispense(recipe)
+  User->>UI: Recipe / target grams + ml
+  UI->>Orch: run_recipe / dose
 
-  Note over Orch,Scale: Preflight
-  Orch->>Scale: read_weight()
-  Scale-->>Orch: raw / filtered
-  Orch->>Orch: cup_present? / zero check
-  alt No cup or scale fault
-    Orch-->>UI: ABORT (NO_CUP / SCALE_FAULT)
+  Note over Orch,Scale: Preflight (cup / interlocks)
+  Orch->>Orch: cup present? e-stop clear?
+  alt No cup or halt
+    Orch-->>UI: ABORT (NO_CUP / ESTOP)
   end
-  Orch->>Scale: tare() / record zero baseline
+  Orch->>Scale: tare()
   Scale-->>Orch: zero_ok
 
   Note over Orch,Vibe: Powder closed loop
-  loop Until powder_mass >= target - overshoot_margin
-    Orch->>Auger: short burst (N steps or t_ms)
-    Orch->>Vibe: pulse (optional concurrent)
+  loop Until powder near target
+    Orch->>Auger: short burst
+    Orch->>Vibe: short pulse (not continuous)
     Auger-->>Orch: done
-    Orch->>Scale: settle_read(window_ms)
+    Orch->>Scale: settle_read
     Scale-->>Orch: current_mass
-    Orch->>Orch: compute remaining; adapt burst size
-    alt No progress after K bursts
-      Orch->>Vibe: longer anti-jam vibrate
-      Orch->>Orch: if still no progress → EMPTY/JAM fault
+    Orch->>Orch: adapt burst size
+    alt No progress (jam window)
+      Orch->>Auger: reverse-auger clear
+      Orch->>Orch: if still no progress → JAM / EMPTY
     end
   end
 
-  Orch->>Vibe: settle vibration (short)
   Orch->>Scale: final_verify after settle
   Scale-->>Orch: powder_final
   alt |powder_final - target| > tolerance
-    Orch-->>UI: WARN / ABORT (ACCURACY)
+    Orch-->>UI: FAIL / WARN (ACCURACY)
   end
 
-  Note over Orch,Pump: Water dosing
-  Orch->>Scale: optional re-baseline for water-on-scale strategy
-  Orch->>Pump: run (timed | flow_pulses | until Δweight)
-  Pump-->>Orch: complete
-  Orch->>Scale: water_verify (if weight strategy)
-  alt Low water / pump dry-run
-    Orch-->>UI: ABORT (LOW_WATER)
+  Note over Orch,Pump: Water open-loop timed
+  Orch->>Pump: run t = V / ml_per_second
+  Pump-->>Orch: complete (estimated volume)
+  Note over Orch,Pump: Verify offline with graduated cylinder when calibrating
+  alt Low water / pump error
+    Orch-->>UI: ABORT (LOW_WATER / PUMP)
   end
 
-  Note over Orch,Mix: Mix
-  Orch->>Mix: stir(duration)
-  Mix-->>Orch: done
+  Note over Orch: mix_delay = sleep only (no mixer motor)
+  Orch->>Orch: sleep(mix_delay_seconds)
 
-  Orch-->>UI: COMPLETE + log (powder_g, water_ml, errors)
-  UI-->>User: Drink ready / status
+  Orch-->>UI: COMPLETE + log (powder_g, water_ml, messages)
+  UI-->>User: Status / log (drink quality not guaranteed)

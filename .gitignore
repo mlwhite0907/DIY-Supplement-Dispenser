@@ -18,7 +18,8 @@ build/
 *.log
 
 # Runtime data (local DBs / logs)
-software/data/
+software/data/*
+!software/data/README.md
 *.db
 
 # 3D / CAD temporary

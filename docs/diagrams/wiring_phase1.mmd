@@ -1,0 +1,89 @@
+%% Phase 1 wiring overview – DIY Supplement Dispenser
+%% Render with Mermaid CLI or any Mermaid-compatible viewer.
+%% Companion docs: hardware/WIRING.md, hardware/ELECTRICAL_SCHEMATIC.md, hardware/PINOUT.md
+
+flowchart TB
+  subgraph WALL["Mains"]
+    AC["Wall AC"]
+  end
+
+  subgraph SUPPLIES["Power supplies"]
+    PI_PSU["Official Pi USB-C PSU"]
+    PSU12["12 V PSU"]
+    F1["Fuse F1 3–5 A"]
+    AC --> PI_PSU
+    AC --> PSU12
+    PSU12 --> F1
+  end
+
+  subgraph CTRL["Controller"]
+    PI["Raspberry Pi 5 / 4<br/>BCM GPIO"]
+    PI_PSU -->|"USB-C"| PI
+  end
+
+  subgraph RAILS["DC rails"]
+    V12["+12V_FUSED"]
+    V5["+5V_AUX<br/>Pi header or buck"]
+    V33["+3V3"]
+    GND["GND_STAR"]
+    F1 --> V12
+    PI --> V33
+    PI --> V5
+    F1 -.->|"PSU −"| GND
+    PI -->|"GND bond"| GND
+  end
+
+  subgraph SCALE["Scale platform"]
+    LC["5 kg load cell<br/>R=E+ B=E− G=A+ W=A−"]
+    HX["HX711"]
+    LC --> HX
+    V33 --> HX
+    HX -->|"GND"| GND
+    HX -->|"DT → GPIO5"| PI
+    PI -->|"SCK GPIO6"| HX
+  end
+
+  subgraph POWDER["Powder station"]
+    TMC["TMC2209<br/>STEP/DIR standalone"]
+    N17["NEMA17 auger"]
+    Q1["MOSFET Q1<br/>+ flyback"]
+    VIBE["Coin vibe motor<br/>default 5 V"]
+    V12 --> TMC
+    V33 -->|"VIO"| TMC
+    TMC -->|"GND"| GND
+    PI -->|"STEP GPIO12"| TMC
+    PI -->|"DIR GPIO13"| TMC
+    PI -->|"EN GPIO16 active-low"| TMC
+    TMC --> N17
+    V5 --> VIBE
+    PI -->|"GPIO17"| Q1
+    Q1 --> VIBE
+    Q1 -->|"Source"| GND
+  end
+
+  subgraph WATER["Water system"]
+    Q2["MOSFET Q2 or relay<br/>+ flyback"]
+    PUMP["12 V peristaltic pump"]
+    FLOW["Flow sensor optional"]
+    FLOAT["Float level optional"]
+    V12 --> PUMP
+    PI -->|"GPIO27"| Q2
+    Q2 --> PUMP
+    Q2 -->|"Source / return"| GND
+    V5 --> FLOW
+    FLOW -->|"pulse GPIO22"| PI
+    FLOAT -->|"GPIO23 pull-up"| PI
+    FLOAT -->|"contact"| GND
+  end
+
+  subgraph SAFETY["Presence / safety"]
+    CUP["Cup-present IR optional"]
+    ESTOP["E-stop NC optional"]
+    CUP -->|"GPIO24"| PI
+    ESTOP -->|"GPIO25 pull-up"| PI
+    ESTOP -->|"NC to"| GND
+  end
+
+  %% Reserved buses note as annotation node
+  RESV["Reserved: I2C GPIO2/3 · SPI GPIO7–11 · UART GPIO14/15 · HAT ID GPIO0/1"]
+  PI -.-> RESV

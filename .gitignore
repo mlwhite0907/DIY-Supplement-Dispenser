@@ -6,13 +6,26 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .env
 *.log
+
+# Runtime data (local DBs / logs)
+software/data/
+*.db
 
 # 3D / CAD temporary
 *.tmp
 *.bak
 ~$*
+*.3mf
 
 # OS
 .DS_Store
@@ -25,3 +38,4 @@ Thumbs.db
 # Local config / secrets
 config.local.py
 secrets.json
+*.local.yaml

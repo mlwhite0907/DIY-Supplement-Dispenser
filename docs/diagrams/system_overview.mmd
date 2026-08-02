@@ -1,0 +1,69 @@
+%% DIY Supplement Dispenser — System Overview (Phase 1 focus + Phase 2+ expansion)
+%% Render with Mermaid (GitHub, mermaid.live, etc.)
+
+flowchart TB
+  subgraph UI["User Interface"]
+    TS[Touchscreen / Recipe UI]
+    SER[Serial / CLI test harness<br/>Phase 1]
+  end
+
+  subgraph CTRL["Control"]
+    PI[Raspberry Pi]
+    PI --> APP[Dispense Orchestrator]
+    APP --> RECIPE[Recipe Store]
+    APP --> STATE[State Machine]
+    APP --> LOG[Event / Weight Log]
+  end
+
+  subgraph POWDER["Powder Path — Phase 1: 1 station"]
+    HOP[Hopper 65° cone<br/>90 mm top ID → 22 mm outlet]
+    VIBE[Coin vibration motor]
+    AUG[Auger screw + NEMA17]
+    OUT[Outlet nozzle]
+    HOP --> AUG
+    VIBE -.->|anti-bridge| HOP
+    AUG --> OUT
+  end
+
+  subgraph WATER["Water Path"]
+    TANK[Refillable tank 2–5 L]
+    LVL[Level sensor]
+    PUMP[12V pump]
+    FLOW[Optional flow sensor<br/>or timed open-loop]
+    NOZ[Water nozzle]
+    TANK --> PUMP --> FLOW --> NOZ
+    LVL -.-> TANK
+  end
+
+  subgraph SENSE["Sensing"]
+    LC[HX711 + 5 kg load cell]
+    CUP[Collection cup]
+    LC --- CUP
+  end
+
+  subgraph MIX["Mixing"]
+    STIR[Stirrer / mix motor<br/>or manual swirl Phase 1]
+  end
+
+  subgraph ACT["Actuation Drivers"]
+    TMC[TMC2209 / stepper driver]
+    MOSFET[MOSFET / relay: pump, vibe, mix]
+  end
+
+  TS --> PI
+  SER --> PI
+  STATE --> TMC
+  STATE --> MOSFET
+  TMC --> AUG
+  MOSFET --> VIBE
+  MOSFET --> PUMP
+  MOSFET --> STIR
+  OUT -->|powder drops| CUP
+  NOZ -->|water| CUP
+  STIR --> CUP
+  LC -->|weight feedback| APP
+
+  style POWDER fill:#f5f0e6,stroke:#8a7040
+  style WATER fill:#e6f0f5,stroke:#406080
+  style SENSE fill:#e8f5e6,stroke:#408050
+  style CTRL fill:#f0e6f5,stroke:#604080

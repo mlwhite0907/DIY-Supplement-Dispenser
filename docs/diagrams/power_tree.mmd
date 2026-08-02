@@ -1,0 +1,57 @@
+%% Phase 1 power distribution tree – DIY Supplement Dispenser
+%% Companion: hardware/POWER_BUDGET.md, hardware/ELECTRICAL_SCHEMATIC.md
+
+flowchart TB
+  AC["Wall AC mains"]
+
+  AC --> PIPSU["Official Raspberry Pi<br/>USB-C PSU"]
+  AC --> PSU12["12 V DC PSU<br/>≥ 3 A, prefer 5 A"]
+
+  PIPSU --> PI["Raspberry Pi 5 / 4"]
+  PI --> REG5["Pi internal 5 V"]
+  PI --> REG33["Pi internal 3.3 V"]
+
+  REG5 --> USB["USB devices / screen path<br/>per display docs"]
+  REG5 --> HDR5["Header 5 V pins 2/4<br/>optional aux only"]
+  REG33 --> GPIO_LOGIC["GPIO logic levels"]
+  REG33 --> HX_VCC["HX711 VCC preferred"]
+  REG33 --> TMC_VIO["TMC2209 VIO"]
+
+  PSU12 --> F1["Fuse F1<br/>3 A–5 A on +12 V"]
+  F1 --> BUS12["+12V_FUSED bus<br/>terminal block"]
+
+  BUS12 --> TMC_VM["TMC2209 VM"]
+  TMC_VM --> N17["NEMA17 coils<br/>~0.4–1.0 A run"]
+
+  BUS12 --> PUMP_P["Peristaltic pump +"]
+  PUMP_P --> PUMP["Pump load<br/>~0.3–1.2 A"]
+  PUMP --> Q2["MOSFET Q2 low-side"]
+
+  BUS12 --> OPT12VIBE["Optional 12 V vibe +"]
+  BUS12 --> BUCKIN["Optional buck 12→5 IN"]
+
+  BUCKIN --> BUCK5["5 V aux buck ≥ 1 A"]
+  BUCK5 --> AUX5["+5V_AUX"]
+  HDR5 --> AUX5
+
+  AUX5 --> VIBE5["Coin vibe motor default<br/>50–150 mA"]
+  VIBE5 --> Q1["MOSFET Q1 low-side"]
+  AUX5 --> SENS5["Flow / IR modules if 5 V"]
+
+  PSU12 --> PSU_NEG["12 V PSU return −"]
+  PSU_NEG --> STAR["GND_STAR<br/>single bond point"]
+  PI --> STAR
+  TMC_VM -.->|"driver GND"| STAR
+  Q1 --> STAR
+  Q2 --> STAR
+  HX_VCC -.->|"module GND"| STAR
+  SENS5 -.-> STAR
+
+  subgraph BUDGET["Budget snapshot"]
+    B1["12 V typical simultaneous ≈ 1.0–1.8 A"]
+    B2["12 V design peak ≈ 2.5–3.5 A"]
+    B3["Prefer sequential powder then water"]
+    B4["Pi: official PSU only — no motor current"]
+  end
+
+  BUS12 -.-> BUDGET

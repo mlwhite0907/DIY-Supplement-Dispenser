@@ -1,0 +1,48 @@
+%% Phase roadmap — risk-first build order
+%% Render with Mermaid
+
+flowchart LR
+  subgraph P1["Phase 1 — Core Drink"]
+    direction TB
+    P1A[Print powder module]
+    P1B[Wire scale + stepper + vibe]
+    P1C[Closed-loop powder ±0.1 g]
+    P1D[Water tank + pump]
+    P1E[First full drink]
+    P1A --> P1B --> P1C --> P1D --> P1E
+  end
+
+  subgraph P2["Phase 2 — Multi + Pills"]
+    direction TB
+    P2A[N powder stations]
+    P2B[Pill module]
+    P2C[Shared cup / frame]
+    P2A --> P2B --> P2C
+  end
+
+  subgraph P3["Phase 3 — Vending UX"]
+    direction TB
+    P3A[12-station layout]
+    P3B[Touchscreen recipes]
+    P3C[Inventory + WiFi]
+    P3D[Enclosure / hygiene]
+    P3A --> P3B --> P3C --> P3D
+  end
+
+  subgraph P4["Phase 4 — Reliability"]
+    direction TB
+    P4A[Jam recovery]
+    P4B[Scale drift / cal]
+    P4C[Long soak tests]
+    P4A --> P4B --> P4C
+  end
+
+  P1 -->|Exit: reliable 1 powder + water + mix| P2
+  P2 -->|Exit: multi-ingredient drinks| P3
+  P3 -->|Exit: product-like UX| P4
+  P4 -->|Exit: daily-use ready| DONE([Home use])
+
+  style P1 fill:#fff4e0,stroke:#c08020
+  style P2 fill:#e8f0ff,stroke:#4060a0
+  style P3 fill:#e8ffe8,stroke:#308050
+  style P4 fill:#f5e8ff,stroke:#7040a0

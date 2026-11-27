@@ -376,34 +376,6 @@
    "fits_256": true
   },
   {
-   "part": "coupon",
-   "material": "PLA",
-   "qty": 0,
-   "watertight": true,
-   "size_mm": [
-    269.8,
-    102.0,
-    40.0
-   ],
-   "solid_cm3": 248.8,
-   "solid_g": 308.5,
-   "fits_256": false
-  },
-  {
-   "part": "coupon_tpu",
-   "material": "TPU",
-   "qty": 0,
-   "watertight": true,
-   "size_mm": [
-    38.5,
-    8.0,
-    23.3
-   ],
-   "solid_cm3": 1.9,
-   "solid_g": 2.3,
-   "fits_256": true
-  },
-  {
    "part": "name_plate_PROTEIN",
    "material": "PLA",
    "qty": 1,
@@ -459,5 +431,6 @@
    "solid_g": 0.1,
    "fits_256": true
   }
- ]
+ ],
+ "note": "Use the fit-test coupon in stl/v6/std-M: the drivetrain, jaw track, latch and seal fits are identical on every head."
 }

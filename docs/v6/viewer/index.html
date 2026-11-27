@@ -1,7 +1,7 @@
 <meta charset="utf-8">
-<title>Dose Bar v5</title>
+<title>Dose Bar v6</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Interactive 3D model of the Dose Bar v5 powder dispenser head">
+<meta name="description" content="Interactive 3D model of the Dose Bar v6 powder dispenser">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@600;700&family=DM+Mono:wght@400;500&display=swap">
@@ -104,8 +104,8 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); ove
 
 <aside class="panel" id="panel" aria-label="Model controls">
   <div class="brand">
-    <h1>Dose Bar v5</h1>
-    <p>Your glass jar flips onto the head. Set the dial once. Pull the handle and let go: one level dose drops into the drawer below. Slide it out and pour.</p>
+    <h1>Dose Bar v6</h1>
+    <p>Your glass jar flips onto the head. Set the dial once. Pull the scoop: one level dose drops into it. Tug, pour, push back.</p>
     <button class="btn toggle-panel" id="togglePanel" type="button" aria-expanded="true">Hide controls</button>
   </div>
 
@@ -120,7 +120,7 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); ove
 
   <div class="group">
     <div class="ctl">
-      <label class="name" for="dial">Dose dial · lift, turn, it locks</label><span class="val" id="dialVal">25 mL</span>
+      <label class="name" for="dial">Dose dial · hidden until you pull</label><span class="val" id="dialVal">25 mL</span>
       <input id="dial" type="range" min="0" max="40" step="1" value="25">
       <span class="hint" id="dialHint">40 clicks · 1 mL each · 0 = off</span>
       <div class="gram-row">
@@ -140,22 +140,22 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); ove
       </div>
     </div>
     <div class="ctl">
-      <label class="name" for="pull">Drawer</label><span class="val" id="pullVal">rest</span>
+      <label class="name" for="pull">Pull</label><span class="val" id="pullVal">rest</span>
       <input id="pull" type="range" min="0" max="100" step="1" value="0">
     </div>
     <div class="row">
       <button class="btn primary" id="pullBtn" type="button">Pull a dose</button>
-      <button class="btn" id="pourBtn" type="button">Slide out &amp; pour</button>
+      <button class="btn" id="pourBtn" type="button">Tug &amp; pour</button>
     </div>
     <div class="ctl">
-      <label class="name" for="drawer">Dose drawer</label><span class="val" id="drawerVal">in</span>
+      <label class="name" for="drawer">Scoop</label><span class="val" id="drawerVal">in</span>
       <input id="drawer" type="range" min="0" max="100" step="1" value="0">
-      <span class="hint" id="heapHint">Each pull drops one dose into the drawer below. Slide it out and pour into your cup.</span>
+      <span class="hint" id="heapHint">At the stop the dose is in the scoop. A tug frees it: pour off the far end, then push it back in.</span>
     </div>
     <div class="ctl">
       <label class="name" for="chuck">Twist lock</label><span class="val" id="chuckVal">locked</span>
       <input id="chuck" type="range" min="0" max="100" step="1" value="100">
-      <span class="hint">Twist the ring clockwise and three jaws close on the jar's neck. The lid is never drilled.</span>
+      <span class="hint">Twist the collar and three jaws close on the jar's neck. The lid is never drilled.</span>
     </div>
   </div>
 
@@ -285,7 +285,7 @@ function setModel(entry) {
   if (entry.meta.cup && entry.meta.key !== 'row') {
     heap = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24), mats.powder);
     heap.castShadow = true; heap.receiveShadow = true;
-    heap.userData.info = { label: 'Your dose, waiting in the drawer', material: '', role: 'powder' };
+    heap.userData.info = { label: 'Your dose, in the scoop', material: '', role: 'powder' };
     entry.root.add(heap);
   }
   const m = entry.meta;
@@ -295,14 +295,15 @@ function setModel(entry) {
   $('#dial').value = state.dial;
   $('#dialHint').textContent = `${m.clicks} clicks · ${m.ml_per_click} mL each · 0 = off`;
   const specs = [
-    ['Head diameter', `${m.puck_d.toFixed(0)} mm`],
+    ['Collar diameter', `${m.puck_d.toFixed(0)} mm`],
     ['Dose range', `0–${m.v_max} mL`],
     ['Per click', `${m.ml_per_click} mL`],
-    ['Drawer stroke', `${m.stroke.toFixed(1)} mm`],
+    ['Footprint', `${m.body[0].toFixed(0)} × ${m.body[1].toFixed(0)} mm`],
+    ['Pull to the stop', `${m.stroke.toFixed(0)} mm`],
     ['Jar neck', `${m.neck_od} mm ±10`],
   ];
-  if (m.key === 'row') specs.splice(0, 5, ['Heads shown', '3'], ['Spacing', `${m.row_pitch.toFixed(0)} mm`], ['Pedestal height', `${m.ped_h.toFixed(0)} mm`], ['Add a jar', 'print one more head']);
-  else specs.push(['Total height', `${(m.ped_h + m.rim_z + m.jar_h - 8).toFixed(0)} mm`]);
+  if (m.key === 'row') specs.splice(0, 6, ['Heads shown', '3'], ['Spacing', `${m.row_pitch.toFixed(0)} mm`], ['Gap between heads', '6 mm'], ['Add a jar', 'print one more head']);
+  else specs.push(['Total height', `${(m.ped_h + m.rim_z + m.jar_h).toFixed(0)} mm`]);
   $('#specs').innerHTML = specs.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
   frameCamera('hero', true);
   apply();
@@ -326,14 +327,15 @@ function apply() {
       const base = o.userData.base;
       o.position.copy(base); o.rotation.copy(o.userData.baseRot);
       const g = info.group || 'static';
-      const head = info.head || [0, 0];           // head origin offset in the bar
+      const head = info.head || [0, 0];           // head origin offset in a row
+      const scoopD = pullD + (state.drawer / 100) * ((m.cup || {}).travel || 0);
       if (g === 'slide' || g === 'plunger' || g === 'dial') o.position.y -= pullD;
+      if (g === 'scoop') o.position.y -= scoopD;
       if (g === 'plunger') o.position.y -= chL;
       if (g === 'dial') {
         const ax = k.dial_axis || [0, 0];
-        const cx = ax[0] + head[0], cy = ax[1] + head[1];
+        const cx = ax[0] + head[0], cy = ax[1] + head[1] - pullD;      // the dial rides on the slide
         const c = Math.cos(dialAng), s = Math.sin(dialAng);
-        // rotate the mesh about the dial axis (z) through (cx, cy)
         const px = o.position.x - cx, py = o.position.y - cy;
         o.position.x = cx + px * c - py * s; o.position.y = cy + px * s + py * c;
         o.rotation.z += dialAng;
@@ -349,9 +351,15 @@ function apply() {
         const d = rPin - (k.r_pin_open || 0);
         o.position.x += Math.cos(a) * d; o.position.y += Math.sin(a) * d;
       }
+      if (g === 'wand' && k.wand) {
+        // the gate rests until the slide's notch end reaches the finger, then rocks through the last part of the pull
+        const w = k.wand, pegU = Math.max(w.u_home, w.notch_u0 + pullD + w.hw + 0.2);
+        const a = -(Math.asin((pegU - w.u) / w.arm) - Math.asin((w.u_home - w.u) / w.arm));
+        const cy = w.y + head[1], py = o.position.y - cy, pz = o.position.z - w.z;
+        const c = Math.cos(a), s = Math.sin(a);
+        o.position.y = cy + py * c - pz * s; o.position.z = w.z + py * s + pz * c; o.rotation.x += a;
+      }
       if (g === 'jar') o.visible = state.jar;
-      if (g === 'drawer') o.position.y -= (state.drawer / 100) * ((model.meta.cup || {}).travel || 0);
-      if (g === 'band') o.visible = state.pull < 2;
       // exploded view: lift parts by their layer index
       if (ex > 0.001) o.position.z += ex * (info.explode || 0);
       o.material.clippingPlanes = state.cut && info.role !== 'glass' ? [clipPlane] : [];
@@ -364,14 +372,14 @@ function apply() {
     const V = Math.max(1, state.heap) * 1000, ry = Math.cbrt(V / 1.131);
     const maxX = (cup.w || 60) / 2 - 4, maxY = Math.abs((cup.y_front || -120) - (cup.y_rear || -10)) / 2 - 6;
     heap.scale.set(Math.min(1.2 * ry, maxX), Math.min(ry, maxY), Math.min(0.45 * ry, (cup.in_h || 36) - 4));
-    heap.position.set(0, (m.drop_y || -37) - (state.drawer / 100) * (cup.travel || 0), (cup.bot_z || -40) + (cup.floor_t || 2));
-    heap.position.z += ex * -95;
+    heap.position.set(0, (m.drop_y || 0) - pullD - (state.drawer / 100) * (cup.travel || 0), (cup.bot_z || -40) + (cup.floor_t || 2));
+    heap.position.z += ex * 0;
   }
   $('#drawerVal').textContent = state.drawer < 1 ? 'in' : (state.drawer > 99 ? 'out' : `${Math.round(state.drawer)}%`);
   $('#dialVal').textContent = `${(+state.dial).toFixed(m.ml_per_click < 1 ? 1 : 0)} mL`;
   const g = state.dial * parseFloat($('#powder').value);
   $('#gramVal').textContent = state.dial === 0 ? 'off' : `${g < 10 ? g.toFixed(1) : Math.round(g)} g`;
-  $('#pullVal').textContent = state.pull < 1 ? 'rest' : (state.pull > 99 ? 'full pull' : `${Math.round(state.pull)}%`);
+  $('#pullVal').textContent = state.pull < 1 ? 'home' : (state.pull > 99 ? 'at the stop' : `${Math.round(state.pull)}%`);
   $('#chuckVal').textContent = state.chuck > 0.98 ? 'locked' : (state.chuck < 0.02 ? 'open' : 'turning');
 }
 
@@ -429,26 +437,26 @@ $('#togglePanel').addEventListener('click', () => {
 });
 let pullAnim = null;
 $('#pullBtn').addEventListener('click', () => {
-  if (pullAnim) return;
-  const t0 = performance.now(), dur = 1500;
+  if (pullAnim || pourAnim) return;
+  const t0 = performance.now(), dur = 1100, from = state.pull; state.drawer = 0; $('#drawer').value = 0;
   pullAnim = (t) => {
     const u = Math.min(1, (t - t0) / dur);
-    // out (0..0.45), hold (0.45..0.6), spring back (0.6..1)
-    const p = u < 0.45 ? easeInOut(u / 0.45) : (u < 0.6 ? 1 : 1 - easeOut((u - 0.6) / 0.4));
-    state.pull = p * 100; $('#pull').value = state.pull;
-    if (!pullAnim.dosed && u > 0.42) { pullAnim.dosed = true; state.heapTarget = Math.min((state.heapTarget || 0) + (+state.dial), (model.meta.v_max || 40) * 3); }
+    state.pull = from + (100 - from) * easeInOut(u); $('#pull').value = state.pull;       // out to the soft stop, and it stays there
+    if (!pullAnim.dosed && u > 0.6) { pullAnim.dosed = true; state.heapTarget = Math.min((state.heapTarget || 0) + (+state.dial), (model.meta.v_max || 40) * 3); }
     apply();
     if (u >= 1) pullAnim = null;
   };
 });
 let pourAnim = null;
 $('#pourBtn').addEventListener('click', () => {
-  if (pourAnim) return;
-  const t0 = performance.now();
+  if (pourAnim || pullAnim) return;
+  const t0 = performance.now(); state.pull = 100; $('#pull').value = 100;
   pourAnim = (t) => {
-    const u = Math.min(1, (t - t0) / 2600);
-    state.drawer = 100 * (u < 0.35 ? easeInOut(u / 0.35) : (u < 0.65 ? 1 : 1 - easeInOut((u - 0.65) / 0.35)));
-    if (u > 0.45 && u < 0.6) { state.heapTarget = 0; }
+    const u = Math.min(1, (t - t0) / 3600);
+    // tug the scoop out (0..0.3), pour (0.3..0.5), back in (0.5..0.8), push the slide home (0.8..1)
+    state.drawer = 100 * (u < 0.3 ? easeInOut(u / 0.3) : (u < 0.5 ? 1 : (u < 0.8 ? 1 - easeInOut((u - 0.5) / 0.3) : 0)));
+    if (u > 0.36) state.heapTarget = 0;
+    if (u > 0.8) { state.pull = 100 * (1 - easeInOut((u - 0.8) / 0.2)); $('#pull').value = state.pull; }
     $('#drawer').value = state.drawer; apply();
     if (u >= 1) pourAnim = null;
   };

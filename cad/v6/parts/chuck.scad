@@ -14,8 +14,8 @@ module ring_body() {
 module ring() { rotate(RING_PHI) ring_body(); }
 module ring_print() { translate([0, 0, -Z_RING_BOT]) ring_body(); }
 
-module jaw_track() {      // along +x; dovetail, narrow at the top
-    r0 = R_PIN_MIN - PIN_OFF + FOOT_IN - 0.5;  r1 = R_PIN_MAX + JAW_TAIL + 0.5;
+module jaw_track() {      // along +x; dovetail, narrow at the top; OPEN at the plate's outer edge so the jaw can slide in
+    r0 = R_PIN_MIN - PIN_OFF + FOOT_IN - 0.5;  r1 = GP_OD/2 + 1;
     hull() {
         translate([r0, -DOVE[1]/2 - 0.2, Z_HUB_TOP - 0.02]) cube([r1 - r0, DOVE[1] + 0.4, 0.01]);
         translate([r0, -DOVE[0]/2 - 0.2, Z_GP_TOP + 0.01]) cube([r1 - r0, DOVE[0] + 0.4, 0.01]);

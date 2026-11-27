@@ -62,7 +62,7 @@ Densities are typical values, not your product's. The scale has the last word. E
 ## Clean
 
 - Weekly: pull the scoop out and wipe it. Lift the head and wipe the tub (fine dust that gets behind the slide is designed to fall there).
-- When changing powders: undo the 6 screws on the insert, lift it off, lift out the slide, brush everything dry.
+- When changing powders: lift the shell and chuck off (3 screws), undo the 8 screws on the insert, lift it off, lift out the slide, brush everything dry.
 - Wash PLA parts in lukewarm water only (below 40 °C) and dry them fully before refilling. Damp powder cakes.
 
 ## If something feels wrong

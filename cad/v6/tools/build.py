@@ -33,7 +33,7 @@ def main():
     def one(j):
         n, mat, q, extra, fn = j
         m, msgs = render(n, defs + extra)
-        if m is None: return dict(part=fn, error=' | '.join(msgs))
+        if m is None or msgs: return dict(part=fn, error=' | '.join(msgs) or 'render failed')     # any OpenSCAD warning fails the build
         m, ok = clean(m); m.export(os.path.join(out, fn + '.stl'))
         e = m.extents
         return dict(part=fn, material=mat, qty=q, watertight=ok, size_mm=[round(float(x), 1) for x in e],

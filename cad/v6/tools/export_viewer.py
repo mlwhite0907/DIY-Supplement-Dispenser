@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export the interactive viewer's models: docs/v6/viewer/models/<key>.glb + <key>.json
+"""Export the interactive viewer's models: docs/v6/viewer/models/<key>.gltf.json + <key>.json
 
   python3 tools/export_viewer.py            # std, pro and a row of three
 
@@ -73,10 +73,16 @@ def write(key, meshes, meta):
     os.makedirs(OUT, exist_ok=True)
     sc = trimesh.Scene()
     for n, m in meshes.items(): sc.add_geometry(m, node_name=n, geom_name=n)
-    sc.export(os.path.join(OUT, key + '.glb'))
+    # glTF as one JSON file with the buffers embedded (plain .json is served everywhere, binary .glb is not)
+    import base64
+    files = sc.export(file_type='gltf')
+    g = json.loads(files['model.gltf'])
+    for b in g.get('buffers', []):
+        b['uri'] = 'data:application/octet-stream;base64,' + base64.b64encode(files[b['uri']]).decode()
+    path = os.path.join(OUT, key + '.gltf.json'); json.dump(g, open(path, 'w'), separators=(',', ':'))
     meta['key'] = key
     json.dump(meta, open(os.path.join(OUT, key + '.json'), 'w'), indent=1)
-    print(key, f'{os.path.getsize(os.path.join(OUT, key + ".glb"))/1e6:.1f} MB', len(meshes), 'meshes')
+    print(key, f'{os.path.getsize(path)/1e6:.1f} MB', len(meshes), 'meshes')
 
 if __name__ == '__main__':
     ms, meta = head('std'); write('std', ms, meta)

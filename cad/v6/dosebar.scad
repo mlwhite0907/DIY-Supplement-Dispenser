@@ -32,6 +32,8 @@ echo(str("[dosebar] ", JAR_NAME, " class ", CLASS_NAME, " 0-", V_MAX, " mL @ ", 
     " | rim z ", Z_RIM, " | tub H ", PED_H, " | scroll lead ", SCROLL_LEAD, " / ", SCROLL_LEAD_ANGLE, " deg"));
 assert(SEAL_WINDOW >= 5, "sealed transit: the chamber must be closed on top before it reaches the drop hole");
 assert(REAR_L >= STROKE + 5, "the rear section must keep the throat covered at full pull");
+assert(BOSS_MID > 20 && BOSS_MID < 200, "insert screw positions must be real numbers (definition order in params.scad)");
+for (p = BOSS_XY) assert(abs(p[0]) > SLIDE_W/2 + LUG[0] + 5, "insert screws must stay clear of the slide");
 
 // Part registry: [name, material, qty per head, color role]
 PARTS = [

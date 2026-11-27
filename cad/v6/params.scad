@@ -254,8 +254,12 @@ Y_BOX_REAR = hy(-REAR_L) + 6.0;      // inner face of the chassis rear wall; the
 BUMP = [20.0, 4.4, 1.6];             // rear bumper: [width, PLA block depth, TPU proud of the block]
 HOME_GRIP = [6.6, 6.0, 7.6, 9.0];    // slide home catch: TPU tube OD on the bumper, slot width / depth / height in the slide's rear end
 SCOOP_DETENT_Y = 20;                 // scoop home detent (head y): bump on the tub rails, groove in the scoop walls
-BOSS_Y   = [hy(PIER_U0 - STOP_PAD - 6.5), hy(T_LEN + 1.5), Y_BOX_REAR - 6];   // front (just behind the stop piers), strike-off line, rear
-BOSS_XY  = [for (y = BOSS_Y) for (s = [-1, 1]) [s*(BOX_X - 4), y]];   // 6 x M3 from above
+// Insert screws: 8 x M3 from above. The two middle pairs flank the throat and sit just outside the
+// funnel body's overhang (radius > HUB_STEP_OD/2 + 4), so a straight driver reaches every one.
+_RSTEP   = (HUB_OD + 8)/2;           // = HUB_STEP_OD/2 (defined below)
+BOSS_MID = sqrt(pow(_RSTEP + 4.5, 2) - pow(min(BOX_X - 4, _RSTEP + 4), 2)) + 1.5;
+BOSS_Y   = [hy(PIER_U0 - STOP_PAD - 6.5), -BOSS_MID, BOSS_MID, Y_BOX_REAR - 6];
+BOSS_XY  = [for (y = BOSS_Y) for (s = [-1, 1]) [s*(BOX_X - 4), y]];
 SHELL_Z0 = 0.2;                      // shell skin starts here (never bears on the tub)
 HUB_STEP_OD = HUB_OD + 8;            // ledge the shell's shoulder rests on
 Z_STEP   = Z_SHOULDER - SHOULDER_T;  // top of that ledge

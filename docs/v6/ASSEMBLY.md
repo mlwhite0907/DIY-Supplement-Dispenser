@@ -6,7 +6,7 @@ Tools: a 2.5 mm hex key (or the driver that fits your M3 screws). No glue, no sp
 
 | Qty | Screw | Where |
 |---|---|---|
-| 6 | M3 × 10 (8–12 works) | Funnel insert down into the chassis |
+| 8 | M3 × 10 (8–12 works) | Funnel insert down into the chassis |
 | 3 | M3 × 12 (10 works) | Guide plate onto the hub |
 | 1 | M3 × 8 (8–10 works) | Dial, from under the slide |
 | 1 | M3 × 8 | Agitator gate onto its pin, from inside the funnel |
@@ -29,17 +29,17 @@ All screws cut their own thread in PLA. Stop when snug.
 **3. Funnel insert** (turn it upside down)
 1. Press the **U-seal** root into its groove. The thin blade must lean **toward the throat opening**.
 2. From the outside, push the **wand arm**'s pin through the hole in the funnel wall.
-3. Inside the funnel, put the **gate** on the pin's flat and fix it with the **M3 × 8**.
+3. Inside the funnel, put the **gate** on the pin's flat and fix it with the **M3 × 8** (use a hex-socket screw and the short arm of an L key).
 4. Push the **TPU finger** through the square socket at the arm's lower end, from the outside, until its head seats.
 
 **4. Head**
 1. Lay the slide on the chassis floor between the rails and push it back until the bumper's tube clicks into the slot in its rear end.
 2. Lower the insert onto the chassis walls. The arm drops through the notch in the plate, and the finger's tip goes into the long notch in the slide's side.
-3. Fix with **6 × M3 × 10**.
+3. Fix with **8 × M3 × 10** (all eight are reachable straight down, outside the funnel).
 4. Pull the slide out by its face and push it back a few times. It should run freely, stop softly at both ends, and the gate should rock at the end of each stroke.
 5. Drop the **shell** over the insert.
 6. Drop the **ring** on, grooves up.
-7. Fit a **boot** on each **jaw**. Push the three jaws into the guide plate's tracks from the middle.
+7. Fit a **boot** on each **jaw**. Slide the three jaws into the guide plate's tracks from the **outer edge** (the tracks are open at the rim).
 8. Turn the ring so the groove ends sit under the tracks, lower the plate so each jaw pin enters its groove, and fix with **3 × M3 × 12**.
 9. Turn the ring: all three jaws must move together. Counter-clockwise seen from above closes them.
 

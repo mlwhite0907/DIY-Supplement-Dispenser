@@ -32,11 +32,11 @@ PLA, TPU and a handful of M3 screws.
 ## Build one
 
 1. [Print guide](PRINT_GUIDE.md): what to print, in what order, with what settings.
-2. [Assembly](ASSEMBLY.md): eleven M3 screws, about 20 minutes.
+2. [Assembly](ASSEMBLY.md): thirteen M3 screws, about 20 minutes.
 3. [Use, calibrate, clean](USE_AND_CALIBRATE.md): dial chart by powder type, caffeine rules.
 4. [Handoff](HANDOFF.md): design decisions, how to rebuild the STLs, open questions.
 
-Spin the 3D model: open `viewer/index.html` (served from this folder), or see the link in the pull request.
+Spin the 3D model: serve this folder (`python3 -m http.server` in `docs/v6/viewer`) and open `index.html`, or use the link in the pull request.
 
 ## Size
 

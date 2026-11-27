@@ -49,8 +49,8 @@
     205.8,
     20.6
    ],
-   "solid_cm3": 107.0,
-   "solid_g": 132.6,
+   "solid_cm3": 109.3,
+   "solid_g": 135.5,
    "fits_256": true
   },
   {
@@ -64,7 +64,7 @@
     45.2
    ],
    "solid_cm3": 237.9,
-   "solid_g": 295.0,
+   "solid_g": 294.9,
    "fits_256": true
   },
   {
@@ -172,11 +172,11 @@
    "watertight": true,
    "size_mm": [
     155.0,
-    155.0,
+    154.9,
     5.0
    ],
-   "solid_cm3": 51.8,
-   "solid_g": 64.3,
+   "solid_cm3": 51.4,
+   "solid_g": 63.8,
    "fits_256": true
   },
   {
@@ -385,8 +385,8 @@
     100.9,
     33.1
    ],
-   "solid_cm3": 58.0,
-   "solid_g": 72.0,
+   "solid_cm3": 57.9,
+   "solid_g": 71.8,
    "fits_256": true
   },
   {

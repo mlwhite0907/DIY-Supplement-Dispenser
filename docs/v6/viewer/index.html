@@ -259,7 +259,7 @@ let heap = null;   // powder pile inside the dose drawer
 async function loadModel(key) {
   if (cache[key]) return cache[key];
   const meta = await (await fetch(`models/${key}.json`)).json();
-  const gltf = await loader.loadAsync(`models/${key}.glb`);
+  const gltf = await loader.parseAsync(await (await fetch(`models/${key}.gltf.json`)).text(), '');
   const root = gltf.scene;
   const parts = {};
   root.traverse((o) => {

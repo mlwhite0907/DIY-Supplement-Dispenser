@@ -4,11 +4,11 @@ Matches appearance.scad defaults, without the small text labels. No working
 kinematics are implied. Run after build.py. Uses no external asset downloads.
 """
 from pathlib import Path
-import math
+import math, sys
 import numpy as np
 import trimesh
 
-ROOT=Path(__file__).resolve().parents[1]
+ROOT=Path(sys.argv[1]) if len(sys.argv)>1 else Path(__file__).resolve().parents[1]
 OUT=ROOT/'exports'
 colors={'black':[19,21,24,255],'silver':[194,184,161,255],'window':[110,130,133,255]}
 scene=trimesh.Scene()
@@ -40,6 +40,8 @@ for k in range(2):
         mesh.apply_translation([0,0,center]);mesh.visual.face_colors=colors['black']
         scene.add_geometry(mesh,node_name=f'tier-{k+1}-{name}')
 put('handle','top-handle-envelope','silver',xyz=(0,0,322))
+# glTF uses Y up; SCAD/STL use Z up. Rotate the scene, not its part meshes.
+scene.apply_transform(trimesh.transformations.rotation_matrix(-math.pi/2,[1,0,0]))
 dst=OUT/'carousel-12.glb'
 dst.write_bytes(scene.export(file_type='glb'))
 readback=trimesh.load(dst)

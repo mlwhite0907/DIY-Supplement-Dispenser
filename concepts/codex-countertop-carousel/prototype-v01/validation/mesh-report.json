@@ -1,0 +1,243 @@
+{
+  "model": "appearance-v01",
+  "stations_per_tier": 6,
+  "tiers": 2,
+  "total_cartridges": 12,
+  "checks": "Exported individual meshes only; not assembly collision, fit, force, flow, stability, food-contact or physical tests.",
+  "parts": [
+    {
+      "part": "body",
+      "watertight": true,
+      "winding_consistent": true,
+      "components": 1,
+      "bounds_mm": [
+        [
+          -71.7668,
+          -150.0,
+          0.0
+        ],
+        [
+          71.7665,
+          -33.0641,
+          118.0
+        ]
+      ],
+      "extents_mm": [
+        143.5333,
+        116.9359,
+        118.0
+      ],
+      "volume_mm3": 156304.4737809341,
+      "sha256": "4d50c6dd5aff4d047964a6245a8e139ec61c02db57d3e23934ea12ec92db9cd6"
+    },
+    {
+      "part": "liner",
+      "watertight": true,
+      "winding_consistent": true,
+      "components": 1,
+      "bounds_mm": [
+        [
+          -67.5772,
+          -146.4,
+          0.0
+        ],
+        [
+          67.5772,
+          -37.1427,
+          115.0
+        ]
+      ],
+      "extents_mm": [
+        135.1544,
+        109.25730000000001,
+        115.0
+      ],
+      "volume_mm3": 123894.09435763636,
+      "sha256": "01fd9481e64b924bfe6602f68776ce7dc4527c5312343d136f9dd06e4a4572a8"
+    },
+    {
+      "part": "lid",
+      "watertight": true,
+      "winding_consistent": true,
+      "components": 1,
+      "bounds_mm": [
+        [
+          -72.4671,
+          -150.7,
+          -4.0
+        ],
+        [
+          72.4666,
+          -32.3637,
+          9.5
+        ]
+      ],
+      "extents_mm": [
+        144.9337,
+        118.3363,
+        13.5
+      ],
+      "volume_mm3": 90785.24363466667,
+      "sha256": "22b928817a8861ed6fe465a5b4af5a7f50615a3af473f6103c4c73565a8ea914"
+    },
+    {
+      "part": "wheel",
+      "watertight": true,
+      "winding_consistent": true,
+      "components": 1,
+      "bounds_mm": [
+        [
+          -31.0,
+          -31.0,
+          0.0
+        ],
+        [
+          31.0,
+          31.0,
+          18.0
+        ]
+      ],
+      "extents_mm": [
+        62.0,
+        62.0,
+        18.0
+      ],
+      "volume_mm3": 50828.06063089974,
+      "sha256": "5df615f14589bdc44c659e9a510d4beef08a8d373fee8af35af7627cc66550a2"
+    },
+    {
+      "part": "foot",
+      "watertight": true,
+      "winding_consistent": true,
+      "components": 1,
+      "bounds_mm": [
+        [
+          -72.167,
+          -150.4,
+          0.0
+        ],
+        [
+          72.1665,
+          -32.6639,
+          6.0
+        ]
+      ],
+      "extents_mm": [
+        144.33350000000002,
+        117.73610000000001,
+        6.0
+      ],
+      "volume_mm3": 64918.29448929479,
+      "sha256": "da18aa3b97e0408f98f029fd7fa7ad1ac4a5de0994c1b7727419c1572decba66"
+    },
+    {
+      "part": "tray_sector",
+      "watertight": true,
+      "winding_consistent": true,
+      "components": 1,
+      "bounds_mm": [
+        [
+          -77.207,
+          -155.0,
+          0.0
+        ],
+        [
+          77.207,
+          -21.6778,
+          7.0
+        ]
+      ],
+      "extents_mm": [
+        154.414,
+        133.3222,
+        7.0
+      ],
+      "volume_mm3": 85191.52027472168,
+      "sha256": "50810ffec9ba0ec8a7806a2b2500df14c2b3e5e62f50351d11c00bdc78750218"
+    },
+    {
+      "part": "hub",
+      "watertight": true,
+      "winding_consistent": true,
+      "components": 1,
+      "bounds_mm": [
+        [
+          -42.5,
+          -42.5,
+          0.0
+        ],
+        [
+          42.5,
+          42.5,
+          7.0
+        ]
+      ],
+      "extents_mm": [
+        85.0,
+        85.0,
+        7.0
+      ],
+      "volume_mm3": 36036.22508246321,
+      "sha256": "d0bd5c67019f3585d4e45520fabfb91c0f2520d61d980f4217fcbd580e7ab1b4"
+    },
+    {
+      "part": "base_sector",
+      "watertight": true,
+      "winding_consistent": true,
+      "components": 1,
+      "bounds_mm": [
+        [
+          -110.822,
+          -157.0,
+          0.0
+        ],
+        [
+          110.822,
+          -17.7085,
+          14.0
+        ]
+      ],
+      "extents_mm": [
+        221.644,
+        139.29149999999998,
+        14.0
+      ],
+      "volume_mm3": 263544.921474114,
+      "sha256": "cc13f43e7562e37bf238a5e98c334bd1cbeaf2b493ee0e2b4082f54067863c14"
+    },
+    {
+      "part": "handle",
+      "watertight": true,
+      "winding_consistent": true,
+      "components": 1,
+      "bounds_mm": [
+        [
+          -58.0,
+          -58.0,
+          0.0
+        ],
+        [
+          58.0,
+          58.0,
+          34.05
+        ]
+      ],
+      "extents_mm": [
+        116.0,
+        116.0,
+        34.05
+      ],
+      "volume_mm3": 74638.956306864,
+      "sha256": "edd6e986212ba06a68053c56e7c6614f415df6857a95fa273b07ef5133facc8e"
+    }
+  ],
+  "renders": [
+    "assembled",
+    "single-tier",
+    "separated-tiers",
+    "cartridge",
+    "removed-cartridge",
+    "exploded-cartridge"
+  ],
+  "source_sha256": "3b0c3d72dbecd9b62782032ef9d094812308a65ade54c1fd8f61575a322fab38"
+}

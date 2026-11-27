@@ -14,6 +14,8 @@ Updated 2026-11-27. Owner/executor: Codex in the originating 3D Print chat. Repo
 
 `prototype-v01/cad/appearance.scad` is the current visual source. Its README and build script define the component envelopes and renders. `validation/mesh-report.json`, when present, proves the individual exports were checked, not that the device works. The older `carousel-layout.scad`, SVG and development plan are archived five-per-tier studies. They are superseded by this handoff.
 
+**Latest proof:** six renders generated; nine single-component closed meshes passed orientation/positive-volume checks and 256 mm component-envelope checks. The exported GLB has 84 named objects and passed a reload/count/bounds check, with Y up for glTF. `prototype-v01/validation/build-evidence.json` preserves the exact geometry commit, job and output hashes. README previews and downloadable outputs are now present. No dispenser operation, assembled interference check, load rating or physical acceptance is implied.
+
 `prototype-v01/cad/mechanism-study.scad` is a draft horizontal rotor with housing, crude latch, hub and column geometry. It was started before the horizontal thumbwheel appearance was recognized; its shaft axis differs from the visual model. It is retained only as explicit unvalidated research. Do not export, print, or combine it with the approved exterior as if mechanically resolved.
 
 ## Next concrete work

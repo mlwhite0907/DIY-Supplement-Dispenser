@@ -1,0 +1,10 @@
+{
+  "geometry_source_commit": "a9e7370b1fd846477943ca2553841df0343eac83",
+  "job_id": "carousel-visual-v02-20261127",
+  "mesh_result": "PASS: nine single-component, watertight, consistently oriented positive-volume meshes",
+  "render_result": "Six CAD renders generated; exterior, single tier, separated tiers and cartridge visually inspected",
+  "glb_result": "PASS: 84 named objects, round-trip geometry count and bounds; corrected to glTF Y-up on export",
+  "glb_sha256": "0470e5b3e1c9bd7a394e9f4037155d3bb4b81efb0df116e1dc39652b4b0795b2",
+  "glb_export_script_sha256": "8bdf0bedad3cf34521bfbbb79d535371bef8c9ea74f79b6b32d93734aff7072d",
+  "physical_result": "Not printed or tested; mechanisms and structural interfaces unvalidated"
+}

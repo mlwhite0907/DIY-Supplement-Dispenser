@@ -147,6 +147,7 @@ cad/v5/
 - Pinion (separate part `pinion`): m `G_M`, z `G_Z`, PA `G_PA`, addendum `G_ADD`, on the dial axis at slide-local u = `U_DIAL`, face width `PIN_FW`.
   - It slides onto the dial shaft's hex key (`DIAL_KEY_AF` across flats, `PINION_BORE_CL`) from below and is clamped by an M3 screw into the shaft end.
 - Rod front end at slide-local u = `U_ROD_FRONT0` + `CH_L`.
+- Dial seat (cut by the slide): a well `DIAL_WELL_D` × `DIAL_WELL_DEPTH` with 2 key notches `DIAL_WELL_KEY` at `DIAL_WELL_KEYS`, and a stop post `STOP_POST` at `STOP_TAB_ANGLE`. Pinion cavity radius `PINION_CAVITY_R`. The detent part must fit inside the well and use its keys.
 - Detent: `DETENT_TEETH` notches, 40 used. Hard stop tab at `STOP_TAB_ANGLE`, so the gears and the plunger are never the stop.
 - Drawer front: starts at slide-local u = `U_HANDLE0`, length `HANDLE_L`, width `HANDLE_W`, z ∈ [`HANDLE_Z0`, `Z_HANDLE_TOP`].
 

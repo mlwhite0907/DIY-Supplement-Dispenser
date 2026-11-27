@@ -1,0 +1,463 @@
+<meta charset="utf-8">
+<title>Dose Bar v5</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Interactive 3D model of the Dose Bar v5 powder dispenser head">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Inter+Tight:wght@600;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one full-bleed 3D stage; a quiet instrument panel floats at the left (bottom sheet on phones). */
+:root {
+  --bg: #E9E7E2;        /* warm studio grey */
+  --stage-top: #F3F2EE;
+  --panel: rgba(250, 249, 246, 0.92);
+  --fg: #1E2023;
+  --muted: #696C71;
+  --line: #D6D3CC;
+  --accent: #3F6457;     /* sage-teal for active controls */
+  --accent-ink: #FFFFFF;
+  --track: #D9D6CF;
+  --shadow: 0 10px 30px rgba(30, 32, 35, 0.10), 0 1px 3px rgba(30, 32, 35, 0.08);
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Inter Tight", "Inter", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161719; --stage-top: #202225; --panel: rgba(30, 32, 35, 0.92); --fg: #ECEAE5; --muted: #9DA0A5;
+    --line: #34373B; --accent: #8DB8A8; --accent-ink: #10201A; --track: #3A3D42;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.4); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161719; --stage-top: #202225; --panel: rgba(30, 32, 35, 0.92); --fg: #ECEAE5; --muted: #9DA0A5;
+  --line: #34373B; --accent: #8DB8A8; --accent-ink: #10201A; --track: #3A3D42;
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.4); color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); overflow: hidden; }
+#stage { position: fixed; inset: 0; background: radial-gradient(120% 90% at 60% 20%, var(--stage-top), var(--bg) 70%); }
+#stage canvas { display: block; width: 100%; height: 100%; outline: none; touch-action: none; }
+
+.panel {
+  position: fixed; z-index: 5;
+  top: calc(env(safe-area-inset-top, 0px) + 16px);
+  left: max(16px, env(safe-area-inset-left, 0px));
+  width: 300px; max-height: calc(100% - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  overflow: auto; background: var(--panel); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow);
+  display: flex; flex-direction: column; gap: 18px; padding: 18px 18px 16px;
+}
+.brand { display: flex; flex-direction: column; gap: 4px; }
+.brand h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: -0.01em; text-wrap: balance; }
+.brand p { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.group { display: flex; flex-direction: column; gap: 10px; }
+.label { font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: var(--muted); }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--track); border-radius: 10px; padding: 3px; gap: 3px; }
+.seg button { border: 0; background: transparent; color: var(--fg); font: 500 12.5px var(--font-ui); padding: 7px 4px; border-radius: 8px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--panel); box-shadow: 0 1px 2px rgba(0,0,0,0.12); font-weight: 600; }
+.ctl { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 6px 10px; }
+.ctl .name { font-size: 13px; font-weight: 500; }
+.ctl .val { font: 500 13px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--fg); }
+.ctl input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); margin: 0; }
+.ctl .hint { grid-column: 1 / -1; font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: transparent; color: var(--fg); font: 500 12.5px var(--font-ui);
+       padding: 7px 11px; border-radius: 9px; cursor: pointer; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn:hover { border-color: var(--muted); }
+.btn:focus-visible, .seg button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gram-row { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; }
+.gram-row select { margin-left: auto; font: 500 12px var(--font-ui); color: var(--fg); background: transparent;
+                   border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; }
+.gram-row .hint { font-size: 12px; }
+.toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tog { display: flex; align-items: center; gap: 8px; font-size: 12.5px; cursor: pointer; user-select: none; }
+.tog input { accent-color: var(--accent); width: 15px; height: 15px; margin: 0; }
+.specs { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+.specs dt { color: var(--muted); }
+.specs dd { margin: 0; text-align: right; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.tip { position: fixed; z-index: 6; pointer-events: none; background: var(--panel); border: 1px solid var(--line); color: var(--fg);
+       font-size: 12px; padding: 6px 9px; border-radius: 8px; box-shadow: var(--shadow); white-space: nowrap; }
+.tip b { font-weight: 600; }
+.tip span { color: var(--muted); }
+.corner { position: fixed; z-index: 4; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(env(safe-area-inset-bottom, 0px) + 14px);
+          font-size: 11.5px; color: var(--muted); text-align: right; line-height: 1.5; }
+.loading { position: fixed; inset: 0; display: grid; place-items: center; z-index: 3; color: var(--muted); font-size: 13px; pointer-events: none; }
+.toggle-panel { display: none; }
+@media (max-width: 720px) {
+  .panel { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 52%;
+           border-radius: var(--radius) var(--radius) 0 0;
+           padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+           padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 14px); }
+  .panel.collapsed > :not(.brand) { display: none; }
+  .toggle-panel { display: inline-flex; position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); top: 16px; }
+  .corner { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+
+<div id="stage" aria-label="3D model of the Dose Bar head. Drag to rotate, scroll or pinch to zoom."></div>
+<div class="loading" id="loading">Loading the model…</div>
+
+<aside class="panel" id="panel" aria-label="Model controls">
+  <div class="brand">
+    <h1>Dose Bar v5</h1>
+    <p>Your glass jar flips onto the head. Set the dial, pull the drawer, and one level dose drops into your cup.</p>
+    <button class="btn toggle-panel" id="togglePanel" type="button" aria-expanded="true">Hide controls</button>
+  </div>
+
+  <div class="group">
+    <span class="label">Model</span>
+    <div class="seg" role="group" aria-label="Model">
+      <button type="button" data-model="std" aria-pressed="true">4.5″ jar</button>
+      <button type="button" data-model="pro" aria-pressed="false">Protein</button>
+      <button type="button" data-model="bar" aria-pressed="false">Bar ×3</button>
+    </div>
+  </div>
+
+  <div class="group">
+    <div class="ctl">
+      <label class="name" for="dial">Dose dial</label><span class="val" id="dialVal">25 mL</span>
+      <input id="dial" type="range" min="0" max="40" step="1" value="25">
+      <span class="hint" id="dialHint">40 clicks · 1 mL each · 0 = off</span>
+      <div class="gram-row">
+        <label for="powder" class="hint">≈</label>
+        <span class="val" id="gramVal">12 g</span>
+        <select id="powder" aria-label="Powder type">
+          <option value="0.45">whey protein</option>
+          <option value="0.50" selected>BCAA drink mix</option>
+          <option value="0.60">pre-workout</option>
+          <option value="0.62">creatine</option>
+          <option value="0.65">glutamine</option>
+          <option value="0.70">psyllium fiber</option>
+          <option value="0.42">wheat-dextrin fiber</option>
+          <option value="0.80">electrolyte mix</option>
+          <option value="0.35">collagen peptides</option>
+        </select>
+      </div>
+    </div>
+    <div class="ctl">
+      <label class="name" for="pull">Drawer</label><span class="val" id="pullVal">rest</span>
+      <input id="pull" type="range" min="0" max="100" step="1" value="0">
+    </div>
+    <div class="row">
+      <button class="btn primary" id="pullBtn" type="button">Pull a dose</button>
+    </div>
+    <div class="ctl">
+      <label class="name" for="chuck">Twist lock</label><span class="val" id="chuckVal">locked</span>
+      <input id="chuck" type="range" min="0" max="100" step="1" value="100">
+      <span class="hint">Twist the ring clockwise and three jaws close on the jar's neck. The lid is never drilled.</span>
+    </div>
+  </div>
+
+  <div class="group">
+    <span class="label">View</span>
+    <div class="toggles">
+      <label class="tog"><input type="checkbox" id="showJar" checked> Glass jar</label>
+      <label class="tog"><input type="checkbox" id="cutaway"> Cutaway</label>
+      <label class="tog"><input type="checkbox" id="explode"> Exploded</label>
+      <label class="tog"><input type="checkbox" id="spin"> Turntable</label>
+    </div>
+    <div class="row">
+      <button class="btn" type="button" data-cam="hero">3/4</button>
+      <button class="btn" type="button" data-cam="front">Front</button>
+      <button class="btn" type="button" data-cam="top">Top</button>
+      <button class="btn" type="button" data-cam="side">Side</button>
+    </div>
+  </div>
+
+  <dl class="specs" id="specs"></dl>
+</aside>
+
+<div class="corner">Drag to rotate · scroll to zoom · right-drag to pan<br>Hover a part to see what it is</div>
+<div class="tip" id="tip" hidden></div>
+
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { toCreasedNormals } from 'three/addons/utils/BufferGeometryUtils.js';
+
+const $ = (s) => document.querySelector(s);
+const stage = $('#stage');
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+// ---------- renderer / scene ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.95;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled = true;
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.55;
+
+const camera = new THREE.PerspectiveCamera(30, 1, 5, 20000);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true; controls.dampingFactor = 0.08;
+controls.minDistance = 120; controls.maxDistance = 2600;
+controls.maxPolarAngle = Math.PI * 0.52;
+
+const key = new THREE.DirectionalLight(0xffffff, 2.3);
+key.castShadow = true; key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 5; key.shadow.bias = -0.0004; key.shadow.normalBias = 0.8;
+scene.add(key, key.target);
+const fill = new THREE.DirectionalLight(0xfff3e6, 0.55); scene.add(fill);
+const rim = new THREE.DirectionalLight(0xe8efff, 0.8); scene.add(rim);
+scene.add(new THREE.HemisphereLight(0xffffff, 0xcfc9bf, 0.35));
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(8000, 8000), new THREE.ShadowMaterial({ opacity: 0.16 }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+
+// world: OpenSCAD is Z-up, three is Y-up
+const world = new THREE.Group(); world.rotation.x = -Math.PI / 2; scene.add(world);
+
+// ---------- materials ----------
+const clipPlane = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);   // cutaway: hide x > 0 half
+const mats = {};
+function makeMats() {
+  const common = { clippingPlanes: [], clipShadows: true };
+  mats.body   = new THREE.MeshPhysicalMaterial({ color: 0xECE8DF, roughness: 0.62, sheen: 0.3, sheenRoughness: 0.8, side: THREE.DoubleSide, ...common });
+  mats.accent = new THREE.MeshPhysicalMaterial({ color: 0x2F3237, roughness: 0.55, sheen: 0.2, sheenRoughness: 0.7, side: THREE.DoubleSide, ...common });
+  mats.ink    = new THREE.MeshPhysicalMaterial({ color: 0xECE8DF, roughness: 0.6, side: THREE.DoubleSide, ...common });
+  mats.inkdark= new THREE.MeshPhysicalMaterial({ color: 0x2F3237, roughness: 0.6, side: THREE.DoubleSide, ...common });
+  mats.tpu    = new THREE.MeshPhysicalMaterial({ color: 0x3A3D42, roughness: 0.8, side: THREE.DoubleSide, ...common });
+  mats.glass  = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.04, transmission: 1, thickness: 3.5, ior: 1.5,
+                  transparent: true, opacity: 1, side: THREE.DoubleSide, envMapIntensity: 1.1, depthWrite: false, ...common });
+  mats.powder = new THREE.MeshPhysicalMaterial({ color: 0xEFE6D2, roughness: 0.95, side: THREE.DoubleSide, ...common });
+  mats.hl = new THREE.Color(0x5f9a86);
+}
+makeMats();
+
+// ---------- model loading ----------
+const loader = new GLTFLoader();
+const cache = {};
+let model = null;        // { root, meta, parts: {name: [mesh...]}, groups }
+const state = { dial: 25, pull: 0, chuck: 1, jar: true, cut: false, explode: 0, explodeTarget: 0, spin: false };
+
+async function loadModel(key) {
+  if (cache[key]) return cache[key];
+  const meta = await (await fetch(`models/${key}.json`)).json();
+  const gltf = await loader.loadAsync(`models/${key}.glb`);
+  const root = gltf.scene;
+  const parts = {};
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    const name = o.name.replace(/_\d+$/, '').replace(/\.\d+$/, '');
+    o.geometry = toCreasedNormals(o.geometry.index ? o.geometry.toNonIndexed() : o.geometry, Math.PI / 6);
+    const info = meta.parts[o.name] || meta.parts[name] || {};
+    o.userData.info = info; o.userData.base = o.position.clone(); o.userData.baseRot = o.rotation.clone();
+    o.material = (mats[info.role] || mats.body);
+    o.castShadow = info.role !== 'glass'; o.receiveShadow = true;
+    (parts[o.name] = parts[o.name] || []).push(o);
+  });
+  const entry = { root, meta, parts };
+  cache[key] = entry;
+  return entry;
+}
+
+function setModel(entry) {
+  if (model) world.remove(model.root);
+  model = entry;
+  world.add(entry.root);
+  const m = entry.meta;
+  $('#dial').max = m.v_max; $('#dial').step = m.ml_per_click;
+  state.dial = Math.min(state.dial, m.v_max);
+  if (m.key === 'pro' && state.dial < 30) state.dial = 60;
+  $('#dial').value = state.dial;
+  $('#dialHint').textContent = `${m.clicks} clicks · ${m.ml_per_click} mL each · 0 = off`;
+  const specs = [
+    ['Head diameter', `${m.puck_d.toFixed(0)} mm`],
+    ['Dose range', `0–${m.v_max} mL`],
+    ['Per click', `${m.ml_per_click} mL`],
+    ['Drawer stroke', `${m.stroke.toFixed(1)} mm`],
+    ['Jar neck', `${m.neck_od} mm ±10`],
+  ];
+  if (m.key === 'bar') specs.splice(0, 5, ['Bays shown', '3'], ['Bay width', `${m.bay_w.toFixed(0)} mm`], ['Bar height', `${m.bar_h.toFixed(0)} mm`], ['Add a jar', '1 plate + 1 leg']);
+  $('#specs').innerHTML = specs.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+  frameCamera('hero', true);
+  apply();
+}
+
+// ---------- kinematics ----------
+// meta.kin: { stroke, l_max, v_max, ml_per_click, click_deg, dial_axis:[x,y,z], ring_phi_open, ring_phi_closed,
+//             r_pin_open, r_pin_closed, jaw_angles:[...] }
+function apply() {
+  if (!model) return;
+  const m = model.meta, k = m.kin || {};
+  const pullD = (state.pull / 100) * (k.stroke || 0);
+  const chL = (state.dial / (k.v_max || 1)) * (k.l_max || 0);
+  const dialAng = -(state.dial / (k.ml_per_click || 1)) * (k.click_deg || 7.5) * Math.PI / 180;
+  const ringPhi = THREE.MathUtils.lerp(k.ring_phi_open || 0, k.ring_phi_closed || 0, state.chuck) * Math.PI / 180;
+  const rPin = THREE.MathUtils.lerp(k.r_pin_open || 0, k.r_pin_closed || 0, state.chuck);
+  const ex = state.explode;
+  for (const [name, meshes] of Object.entries(model.parts)) {
+    for (const o of meshes) {
+      const info = o.userData.info || {};
+      const base = o.userData.base;
+      o.position.copy(base); o.rotation.copy(o.userData.baseRot);
+      const g = info.group || 'static';
+      const head = info.head || [0, 0];           // head origin offset in the bar
+      if (g === 'slide' || g === 'plunger' || g === 'dial') o.position.y -= pullD;
+      if (g === 'plunger') o.position.y -= chL;
+      if (g === 'dial') {
+        const ax = k.dial_axis || [0, 0];
+        const cx = ax[0] + head[0], cy = ax[1] + head[1];
+        const c = Math.cos(dialAng), s = Math.sin(dialAng);
+        // rotate the mesh about the dial axis (z) through (cx, cy)
+        const px = o.position.x - cx, py = o.position.y - cy;
+        o.position.x = cx + px * c - py * s; o.position.y = cy + px * s + py * c;
+        o.rotation.z += dialAng;
+      }
+      if (g === 'ring') {
+        const c = Math.cos(ringPhi), s = Math.sin(ringPhi);
+        const px = o.position.x - head[0], py = o.position.y - head[1];
+        o.position.x = head[0] + px * c - py * s; o.position.y = head[1] + px * s + py * c;
+        o.rotation.z += ringPhi;
+      }
+      if (g === 'jaw') {
+        const a = (info.angle || 0) * Math.PI / 180;
+        const d = rPin - (k.r_pin_open || 0);
+        o.position.x += Math.cos(a) * d; o.position.y += Math.sin(a) * d;
+      }
+      if (g === 'jar') o.visible = state.jar;
+      // exploded view: lift parts by their layer index
+      if (ex > 0.001) o.position.z += ex * (info.explode || 0);
+      o.material.clippingPlanes = state.cut && info.role !== 'glass' ? [clipPlane] : [];
+      if (info.role === 'glass' || info.role === 'powder') o.material.clippingPlanes = state.cut ? [clipPlane] : [];
+    }
+  }
+  $('#dialVal').textContent = `${(+state.dial).toFixed(m.ml_per_click < 1 ? 1 : 0)} mL`;
+  const g = state.dial * parseFloat($('#powder').value);
+  $('#gramVal').textContent = state.dial === 0 ? 'off' : `${g < 10 ? g.toFixed(1) : Math.round(g)} g`;
+  $('#pullVal').textContent = state.pull < 1 ? 'rest' : (state.pull > 99 ? 'full pull' : `${Math.round(state.pull)}%`);
+  $('#chuckVal').textContent = state.chuck > 0.98 ? 'locked' : (state.chuck < 0.02 ? 'open' : 'turning');
+}
+
+// ---------- camera ----------
+let camTween = null;
+function frameCamera(view, instant) {
+  if (!model) return;
+  const m = model.meta;
+  const box = new THREE.Box3().setFromObject(model.root);
+  const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+  const R = Math.max(size.x, size.y, size.z);
+  const dirs = { hero: [-0.85, 0.55, 1.15], front: [0, 0.22, 1.6], top: [0.001, 1.8, 0.35], side: [1.6, 0.3, 0.001] };
+  const aspect = stage.clientWidth / Math.max(1, stage.clientHeight);
+  const fit = aspect < 1 ? Math.pow(1 / aspect, 0.85) * 0.92 : 1;        // portrait phones need more distance
+  const d = new THREE.Vector3(...(dirs[view] || dirs.hero)).normalize().multiplyScalar(R * (m.key === 'bar' ? 1.9 : 2.55) * fit);
+  const target = center.clone(); target.y = box.min.y + size.y * 0.45;
+  const toPos = target.clone().add(d);
+  if (instant) { camera.position.copy(toPos); controls.target.copy(target); }
+  else {
+    const fromPos = camera.position.clone(), fromT = controls.target.clone(), t0 = performance.now();
+    camTween = (t) => {
+      const u = Math.min(1, (t - t0) / 700), e = easeInOut(u);
+      camera.position.lerpVectors(fromPos, toPos, e); controls.target.lerpVectors(fromT, target, e);
+      if (u >= 1) camTween = null;
+    };
+  }
+  camera.near = Math.max(1, R / 200); camera.far = R * 40; camera.updateProjectionMatrix();
+  key.position.set(center.x - R * 0.9, center.y + R * 1.7, center.z + R * 1.2); key.target.position.copy(center);
+  Object.assign(key.shadow.camera, { left: -R, right: R, top: R, bottom: -R, near: 1, far: R * 6 }); key.shadow.camera.updateProjectionMatrix();
+  fill.position.set(center.x + R * 1.3, center.y + R * 0.6, center.z + R * 0.7);
+  rim.position.set(center.x + R * 0.4, center.y + R * 0.9, center.z - R * 1.6);
+  ground.position.y = box.min.y - 0.05;
+  controls.update();
+}
+
+// ---------- UI ----------
+document.querySelectorAll('[data-model]').forEach((b) => b.addEventListener('click', async () => {
+  document.querySelectorAll('[data-model]').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+  setModel(await loadModel(b.dataset.model));
+}));
+document.querySelectorAll('[data-cam]').forEach((b) => b.addEventListener('click', () => frameCamera(b.dataset.cam)));
+$('#dial').addEventListener('input', (e) => { state.dial = +e.target.value; apply(); });
+$('#powder').addEventListener('change', () => apply());
+$('#pull').addEventListener('input', (e) => { state.pull = +e.target.value; apply(); });
+$('#chuck').addEventListener('input', (e) => { state.chuck = +e.target.value / 100; apply(); });
+$('#showJar').addEventListener('change', (e) => { state.jar = e.target.checked; apply(); });
+$('#cutaway').addEventListener('change', (e) => { state.cut = e.target.checked; apply(); });
+$('#explode').addEventListener('change', (e) => { state.explodeTarget = e.target.checked ? 1 : 0; });
+$('#spin').addEventListener('change', (e) => { state.spin = e.target.checked; controls.autoRotate = state.spin; });
+controls.autoRotateSpeed = 1.2;
+$('#togglePanel').addEventListener('click', () => {
+  const p = $('#panel'); const c = p.classList.toggle('collapsed');
+  $('#togglePanel').textContent = c ? 'Show controls' : 'Hide controls'; $('#togglePanel').setAttribute('aria-expanded', String(!c));
+  resize();
+});
+let pullAnim = null;
+$('#pullBtn').addEventListener('click', () => {
+  if (pullAnim) return;
+  const t0 = performance.now(), dur = 1500;
+  pullAnim = (t) => {
+    const u = Math.min(1, (t - t0) / dur);
+    // out (0..0.45), hold (0.45..0.6), spring back (0.6..1)
+    const p = u < 0.45 ? easeInOut(u / 0.45) : (u < 0.6 ? 1 : 1 - easeOut((u - 0.6) / 0.4));
+    state.pull = p * 100; $('#pull').value = state.pull; apply();
+    if (u >= 1) pullAnim = null;
+  };
+});
+const easeInOut = (x) => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+
+// hover tooltip
+const ray = new THREE.Raycaster(); const ptr = new THREE.Vector2(); let hovered = null;
+renderer.domElement.addEventListener('pointermove', (e) => {
+  const r = renderer.domElement.getBoundingClientRect();
+  ptr.x = ((e.clientX - r.left) / r.width) * 2 - 1; ptr.y = -((e.clientY - r.top) / r.height) * 2 + 1;
+  if (!model) return;
+  ray.setFromCamera(ptr, camera);
+  const hits = ray.intersectObjects(model.root.children, true).filter((h) => h.object.visible && h.object.userData.info && h.object.userData.info.role !== 'glass');
+  const tip = $('#tip');
+  if (hits.length) {
+    const info = hits[0].object.userData.info;
+    tip.innerHTML = `<b>${info.label || hits[0].object.name}</b> <span>· ${info.material || ''}</span>`;
+    tip.style.left = `${e.clientX + 14}px`; tip.style.top = `${e.clientY + 14}px`; tip.hidden = false;
+  } else tip.hidden = true;
+});
+renderer.domElement.addEventListener('pointerleave', () => { $('#tip').hidden = true; });
+
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h;
+  // shift the picture right of the floating panel on wide screens, up from the sheet on phones
+  const p = document.getElementById('panel').getBoundingClientRect();
+  if (w > 720) camera.setViewOffset(w, h, -Math.round((p.right + 8) / 2), 0, w, h);
+  else camera.setViewOffset(w, h, 0, Math.round(Math.min(p.height, h * 0.52) / 2), w, h);
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+
+renderer.setAnimationLoop((t) => {
+  if (pullAnim) pullAnim(t);
+  if (camTween) camTween(t);
+  const d = state.explodeTarget - state.explode;
+  if (Math.abs(d) > 0.001) { state.explode += d * 0.12; apply(); }
+  controls.update();
+  renderer.render(scene, camera);
+});
+
+resize();
+try {
+  setModel(await loadModel('std'));
+  $('#loading').hidden = true;
+} catch (err) {
+  $('#loading').textContent = 'The model files did not load. Reload the page to try again.';
+  console.error(err);
+}
+</script>

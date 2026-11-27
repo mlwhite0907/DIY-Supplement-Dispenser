@@ -202,7 +202,14 @@ Z_DIAL_BOT = Z_SLIDE_TOP + 0.4;
 DIAL_SHAFT_D = 2*(G_RP - G_M*(G_ADD + G_CK)) - 1;   // shaft fits inside pinion root
 DIAL_KEY_AF  = DIAL_SHAFT_D - 2.4;   // hex key across flats at the shaft end (pinion slides on from below)
 PINION_BORE_CL = 0.15;               // hex bore clearance per side
-STOP_TAB_ANGLE = 330;             // dial hard-stop post sits in the unused 60 deg
+STOP_TAB_ANGLE = 330;             // dial hard-stop post sits in the unused 60 deg (angle CCW from +x, about the dial axis)
+// Dial seat in the drawer top (slide cuts it; the detent part lives in it):
+DIAL_WELL_D     = DIAL_D + 1.0;   // shallow round well under the dial
+DIAL_WELL_DEPTH = 2.2;
+DIAL_WELL_KEYS  = [90, 270];      // two anti-rotation key notches in the well wall (angles about the dial axis)
+DIAL_WELL_KEY   = [3.0, 1.5];     // [width, radial depth] of each key notch
+STOP_POST = [DIAL_D/2 - 3.5, 3.0, 2.0];   // [radius from dial axis, diameter, height above well floor] at STOP_TAB_ANGLE
+PINION_CAVITY_R = G_RP + G_M*G_ADD + 0.8;   // pinion cavity radius in the drawer front
 Z_HANDLE_TOP = Z_SLIDE_TOP;       // drawer front top is flush with the slide top
 HANDLE_Z0 = 0.8;                  // drawer front bottom clears the bay plate (z=0)
 NAME_PLATE = [HANDLE_W - 10, 12, 1.6];   // [w, h, t] recess on the drawer front face

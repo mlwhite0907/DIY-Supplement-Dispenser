@@ -67,7 +67,7 @@ PARTS = [
     ["leg",         "PLA", 1, "body"],
     ["foot",        "TPU", 2, "tpu"],
 ];
-COLORS = [["body", "#ECE8DF"], ["accent", "#2F3237"], ["ink", "#2F3237"], ["tpu", "#3A3D42"]];
+COLORS = [["body", "#ECE8DF"], ["accent", "#2F3237"], ["ink", "#ECE8DF"], ["tpu", "#3A3D42"]];
 function _col(k) = COLORS[search([k], COLORS)[0]][1];
 function _pcol(n) = _col(PARTS[search([n], PARTS)[0]][3]);
 
@@ -90,6 +90,14 @@ module posed(name) {
     else if (name == "guide_plate") guide_plate();
     else if (name == "jaw")         for (i=[0:2]) jaw(i);
     else if (name == "jaw_pad")     for (i=[0:2]) jaw_pad(i);
+    else if (name == "jaw0")        jaw(0);
+    else if (name == "jaw1")        jaw(1);
+    else if (name == "jaw2")        jaw(2);
+    else if (name == "jaw_pad0")    jaw_pad(0);
+    else if (name == "jaw_pad1")    jaw_pad(1);
+    else if (name == "jaw_pad2")    jaw_pad(2);
+    else if (name == "jar")         jar_ghost();
+    else if (name == "params_json") cube(0.01);
     else if (name == "gasket")      gasket();
 }
 module printed(name) {

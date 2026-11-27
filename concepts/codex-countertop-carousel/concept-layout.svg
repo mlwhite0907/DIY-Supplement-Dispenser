@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 600" role="img" aria-labelledby="title desc">
+<title id="title">Two-tier countertop supplement carousel concept</title>
+<desc id="desc">A front illustration of two rotating tiers with removable cartridges, and a top view showing five cartridges around a central hub. This is a concept, not an engineered design.</desc>
+<rect width="1100" height="600" fill="#f5f2eb"/>
+<text x="55" y="55" fill="#202c2b" font-family="Arial,sans-serif" font-size="30" font-weight="bold">THE COUNTERTOP CAROUSEL</text>
+<text x="55" y="83" fill="#60716c" font-family="Arial,sans-serif" font-size="16">Two independent tiers · Ten removable cartridges · Manual dosing with a scale</text>
+<g transform="translate(85 120)">
+ <ellipse cx="190" cy="425" rx="185" ry="18" fill="#d7d3c9"/>
+ <rect x="28" y="370" width="324" height="45" rx="20" fill="#283331"/>
+ <rect x="38" y="185" width="304" height="182" rx="30" fill="#273330"/>
+ <rect x="38" y="4" width="304" height="177" rx="30" fill="#273330"/>
+ <g fill="#dedbd2" stroke="#adb3ab" stroke-width="2">
+  <rect x="52" y="24" width="82" height="135" rx="12"/><rect x="149" y="24" width="82" height="135" rx="12"/><rect x="246" y="24" width="82" height="135" rx="12"/>
+  <rect x="52" y="205" width="82" height="140" rx="12"/><rect x="149" y="205" width="82" height="140" rx="12"/><rect x="246" y="205" width="82" height="140" rx="12"/>
+ </g>
+ <g fill="#8da59b"><rect x="76" y="48" width="34" height="47" rx="5"/><rect x="173" y="48" width="34" height="47" rx="5"/><rect x="270" y="48" width="34" height="47" rx="5"/><rect x="76" y="229" width="34" height="47" rx="5"/><rect x="173" y="229" width="34" height="47" rx="5"/><rect x="270" y="229" width="34" height="47" rx="5"/></g>
+ <g fill="#283331"><circle cx="93" cy="129" r="17"/><circle cx="190" cy="129" r="17"/><circle cx="287" cy="129" r="17"/><circle cx="93" cy="310" r="17"/><circle cx="190" cy="310" r="17"/><circle cx="287" cy="310" r="17"/></g>
+ <g stroke="#eeeae2" stroke-width="3"><path d="M93 121v11 M190 121v11 M287 121v11 M93 302v11 M190 302v11 M287 302v11"/></g>
+ <text x="190" y="458" text-anchor="middle" fill="#52645e" font-family="Arial,sans-serif" font-size="14">FRONT · THREE OF FIVE VISIBLE PER TIER</text>
+</g>
+<g transform="translate(730 295)">
+ <circle r="158" fill="#283331"/><circle r="140" fill="#e4e3db"/>
+ <g fill="#c7d4cc" stroke="#81948b" stroke-width="3"><circle cx="0" cy="-104" r="47"/><circle cx="99" cy="-32" r="47"/><circle cx="61" cy="84" r="47"/><circle cx="-61" cy="84" r="47"/><circle cx="-99" cy="-32" r="47"/></g>
+ <circle r="23" fill="#283331"/><circle r="7" fill="#c0c6bc"/>
+ <text x="0" y="194" text-anchor="middle" fill="#52645e" font-family="Arial,sans-serif" font-size="14">TOP VIEW · FIVE CARTRIDGES</text>
+</g>
+<g font-family="Arial,sans-serif" fill="#344841" font-size="15">
+ <text x="470" y="170">↔ Each tier rotates</text>
+ <text x="470" y="204">⊕ Labeled viewing windows</text>
+ <text x="470" y="238">○ Individual front dials</text>
+ <text x="470" y="272">↕ Tiers separate</text>
+ <text x="470" y="306">✓ Cartridges release individually</text>
+</g>
+<text x="55" y="578" fill="#7b827b" font-family="Arial,sans-serif" font-size="13">Illustrative concept only. Bearings, latches, powder mechanism and overhead mounting are not yet engineered or tested.</text>
+</svg>

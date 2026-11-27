@@ -1,0 +1,72 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>html,body{margin:0;background:#fff;overflow:hidden}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+</head><body>
+<script type="module">
+import * as THREE from 'three';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+try {
+const params = new URLSearchParams(location.search);
+const cfg = await (await fetch(params.get('scene'))).json();
+const W = cfg.width || 1600, H = cfg.height || 1200;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = cfg.exposure || 1.0;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(cfg.background || '#f2efe9');
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = cfg.envIntensity ?? 0.6;
+const world = new THREE.Group(); world.rotation.x = -Math.PI/2; scene.add(world); // OpenSCAD Z-up -> three Y-up
+const loader = new STLLoader();
+for (const p of cfg.parts) {
+  const geo = await new Promise((res, rej) => loader.load(p.file, res, undefined, rej));
+  geo.computeVertexNormals();
+  let mat;
+  if (p.glass) {
+    mat = new THREE.MeshPhysicalMaterial({ color: p.color || '#ffffff', metalness: 0, roughness: 0.05,
+      transmission: 1, thickness: 3, ior: 1.5, transparent: true, side: THREE.DoubleSide });
+  } else {
+    mat = new THREE.MeshPhysicalMaterial({ color: p.color || '#dddddd', roughness: p.rough ?? 0.62,
+      metalness: p.metal ?? 0, sheen: p.sheen ?? 0.25, sheenRoughness: 0.8,
+      transparent: (p.opacity ?? 1) < 1, opacity: p.opacity ?? 1 });
+  }
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = !p.glass && (p.shadow ?? true); mesh.receiveShadow = true;
+  const g = new THREE.Group(); g.add(mesh);
+  if (p.pos) g.position.set(...p.pos);
+  if (p.rot) g.rotation.set(...p.rot.map(d => d*Math.PI/180));
+  world.add(g);
+}
+world.updateMatrixWorld(true);
+const box = new THREE.Box3().setFromObject(world);
+const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
+if (cfg.ground !== false) {
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(4000, 4000), new THREE.ShadowMaterial({ opacity: cfg.shadowOpacity ?? 0.18 }));
+  ground.rotation.x = -Math.PI/2; ground.position.y = box.min.y - 0.01; ground.receiveShadow = true; scene.add(ground);
+}
+const L = Math.max(size.x, size.y, size.z);
+const key = new THREE.DirectionalLight('#ffffff', cfg.key ?? 2.2);
+key.position.set(center.x - L*0.8, center.y + L*1.6, center.z + L*1.1);
+key.target.position.copy(center); key.castShadow = true;
+key.shadow.mapSize.set(4096, 4096); key.shadow.radius = 6; key.shadow.bias = -0.0004; key.shadow.normalBias = 0.6;
+Object.assign(key.shadow.camera, { left: -L*1.5, right: L*1.5, top: L*1.5, bottom: -L*1.5, near: 1, far: L*6 });
+scene.add(key, key.target);
+const fill = new THREE.DirectionalLight('#fff4e8', cfg.fill ?? 0.6); fill.position.set(center.x + L*1.2, center.y + L*0.5, center.z + L*0.6); scene.add(fill);
+const rim = new THREE.DirectionalLight('#eef3ff', cfg.rim ?? 0.8); rim.position.set(center.x + L*0.3, center.y + L*0.8, center.z - L*1.5); scene.add(rim);
+scene.add(new THREE.HemisphereLight('#ffffff', '#d8d2c8', cfg.hemi ?? 0.35));
+const z2y = v => new THREE.Vector3(v[0], v[2], -v[1]);
+let cam;
+if (cfg.ortho) { const o = cfg.ortho; cam = new THREE.OrthographicCamera(-o*W/H, o*W/H, o, -o, 1, 20000); }
+else cam = new THREE.PerspectiveCamera(cfg.fov || 28, W/H, 1, 20000);
+if (cfg.camera) { cam.position.copy(z2y(cfg.camera.pos)); cam.lookAt(z2y(cfg.camera.target)); }
+else { cam.position.set(center.x + L*1.4, center.y + L*0.9, center.z + L*1.9); cam.lookAt(center); }
+renderer.render(scene, cam);
+window.__ready = true;
+} catch (e) { window.__error = String(e && e.stack || e); }
+</script></body></html>

@@ -40,3 +40,7 @@ Thumbs.db
 config.local.py
 secrets.json
 *.local.yaml
+cad/v5/tools/render/node_modules/
+cad/v5/tools/render/assets/
+cad/v5/build/
+__pycache__/

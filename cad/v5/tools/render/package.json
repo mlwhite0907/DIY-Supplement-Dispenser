@@ -1,0 +1,7 @@
+{
+  "name": "dosebar-render",
+  "private": true,
+  "type": "module",
+  "description": "Photo renders of Dose Bar STLs (three.js in headless Chromium via Playwright)",
+  "dependencies": { "three": "0.169.0" }
+}

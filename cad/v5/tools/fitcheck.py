@@ -13,6 +13,7 @@ Options:
   --quick        reduced matrix: (pull, dial, chuck) = (0,0,0) (0,V,1) (1,0,1) (1,V,0) (0.5,V/2,1)
   --parts a,b    only these parts (plus the jar); default: every part in posed()
   --no-jar       leave the jar ghost out
+  --no-bar       skip the dock check (head parts vs one bay of the bar, cup space)
   --tol MM3      interference tolerance for non-allowlisted pairs (default 0.5)
   --gap MM       report clearances below this (min_gap search length, default 0.6; 0 = off)
   --allow a:b=V  extra allowlist entry (repeatable)
@@ -23,8 +24,9 @@ Options:
 What it does:
   1. Exports every part in its ASSEMBLED pose with -D 'PART="posed:<part>"' over the
      state matrix STATE_PULL {0, 0.5, 1} x DIAL_ML {0, V_MAX/2, V_MAX} x CHUCK_CLOSE {0, 1}.
-     Each part is probed once per state variable; a part that does not move with a
-     variable is exported once for all its values. Posed STLs are cached by
+     Which state variables move a part is found by static analysis of the sources
+     (SLIDE_Y0, CH_L, DIAL_ANGLE, R_PIN, RING_PHI, ...); a part that does not move
+     with a variable is exported once for all its values. Posed STLs are cached by
      (part, state, preset) under build/fit/<preset>/ and re-exported only when a
      source they depend on changes.
   2. Adds the jar ghost (jar_ghost() from dosebar.scad) as part "jar".
@@ -35,6 +37,8 @@ What it does:
      interference > --tol mm3 is a failure.
   5. Skin check: the slide must stay inside a cylinder of radius PUCK_R from z = 0
      to Z_RING_TOP, except where it passes out through the front drawer opening.
+     Dock check (once the bar exists): every head part, placed on bay 0, against
+     bar_assembly(1) without its heads, and a 90 mm x SHAKER_H cup under the drop hole.
   6. Prints a table, writes build/fit/<preset>/report.json and FITCHECK.md.
 
 Exit code: 0 = clean, 1 = unexpected interference / allowance exceeded / skin
@@ -71,10 +75,16 @@ ALLOWLIST = [
      "TPU detent preload on the dial notches"),
     ("gasket", "guide_plate", lambda P: 0.3 * math.pi * (P["GASKET_OD"] + P["GASKET_ID"]) * (P["GASKET_T"] - P["GASKET_PROUD"]),
      "TPU gasket pressed into its pocket"),
+    # Not in the original brief: the gasket's half-round sealing bead stands above Z_RIM and is
+    # meant to be squashed by the jar rim. Bound: a 0.9 mm2 section around the mean rim circle.
+    ("gasket", "jar", lambda P: 0.9 * math.pi * (P["GASKET_OD"] + P["GASKET_ID"]) / 2,
+     "sealing bead squashed by the jar rim (gasket.scad)"),
 ]
 PARAMS_NEEDED = ["V_MAX", "PUCK_R", "SKIN_T", "Z_RING_TOP", "CHAN_HW", "HANDLE_W", "T_WID", "JAW_W", "JAW_H",
                  "GASKET_OD", "GASKET_ID", "GASKET_T", "GASKET_PROUD", "STROKE", "CLASS_NAME"]
 SKIN_PARTS = ["slide"]
+# Head origin on bay 0 in bar coordinates (docs/v5/BUILD_BRIEFS.md, BAR): (i*BAY_W, BAY_Y_HEAD, BAR_H).
+BAY_ORIGIN0 = "[0, is_undef(BAY_Y_HEAD) ? 0 : BAY_Y_HEAD, BAR_H]"
 
 
 def pair_key(a, b):
@@ -145,11 +155,13 @@ def skin_check(slide_mf, slide_tm, P, m3):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0],
-                                 formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
+                                 formatter_class=argparse.RawDescriptionHelpFormatter,
+                                 epilog=__doc__.split("\n\n", 1)[1])
     ap.add_argument("--preset", default="std")
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--parts", default="")
     ap.add_argument("--no-jar", action="store_true")
+    ap.add_argument("--no-bar", action="store_true")
     ap.add_argument("--tol", type=float, default=0.5)
     ap.add_argument("--gap", type=float, default=0.6)
     ap.add_argument("--allow", action="append", default=[])
@@ -167,31 +179,35 @@ def main(argv=None):
     P = C.eval_scad(PARAMS_NEEDED, cache.base_defs, cache.dir / "_scad")
     V = float(P["V_MAX"])
     states = matrix(V, args.quick)
-    parts = cache.posed_names
+    parts = cache.head_parts
     if args.parts:
         want = [p.strip() for p in args.parts.split(",") if p.strip()]
-        bad = [p for p in want if p not in parts and p != "jar"]
+        bad = [p for p in want if p not in cache.posed_names and p != "jar"]
         if bad:
             raise SystemExit(f"not in posed(): {', '.join(bad)}  (have: {', '.join(parts)})")
         parts = [p for p in want if p != "jar"]
     C.say(f"[fitcheck] {cache.preset} (class {P['CLASS_NAME']}, V_MAX {V:g} mL): {len(parts)} parts x "
           f"{len(states)} states{' (quick)' if args.quick else ''}")
 
-    deps = cache.deps(parts)
-    stubs = [p for p in parts if deps.get(p) is None]
-    errored = {p: deps[p]["error"] for p in parts if isinstance(deps.get(p), dict)}
-    live = [p for p in parts if isinstance(deps.get(p), list)]
+    deps = cache.deps(parts)                      # static: which state variables move each part
+    res = cache.export_states([(p, st) for p in parts for st in states], deps)
+    stubs, errored, live = [], {}, []
+    for p in parts:
+        rs = [r for (q, _), r in res.items() if q == p and r is not None]
+        if rs and all(r.get("status") == "empty" for r in rs):
+            stubs.append(p)
+            continue
+        bad = [r for r in rs if r.get("status") not in ("ok", "empty")]
+        if bad:
+            errored[p] = bad[0].get("errors") or [bad[0].get("status")]
+        if any(r.get("status") == "ok" for r in rs):
+            live.append(p)
     for p in live:
         C.say(f"  {p:<12} moves with: {', '.join(deps[p]) or '(static)'}")
     if stubs:
         C.say(f"  not implemented (skipped): {', '.join(stubs)}")
     for p, e in errored.items():
         C.say(f"  EXPORT ERROR {p}: {'; '.join(e or [])[:300]}")
-
-    res = cache.export_states([(p, st) for p in live for st in states], deps)
-    for (p, sk), r in res.items():
-        if r is not None and r.get("status") != "ok":
-            errored.setdefault(p, r.get("errors"))
     jar = None
     if not args.no_jar:
         jr = cache.export_jar()
@@ -220,7 +236,7 @@ def main(argv=None):
 
     findings = {}       # pair -> {max, state, gap_min, gap_state, per_state}
     unreadable = {}
-    skin = []
+    skin, skin_memo = [], {}
     n_bool = n_gap = 0
     for st in states:
         sk = C.state_key(st)
@@ -265,7 +281,7 @@ def main(argv=None):
             f["overlap"] |= boxes_overlap(ga[1], gb[1], 0.01)
             v = float(ent["vol"])
             f["per_state"][sk] = round(v, 3)
-            if f["state"] is None or v > f["max"]:
+            if f["state"] is None or v > f["max"] + 1e-6:
                 f["max"], f["state"] = v, st
             gp = ent.get("gap")
             if gp is not None and gp < args.gap and (f["gap_min"] is None or gp < f["gap_min"]):
@@ -273,10 +289,39 @@ def main(argv=None):
         for p in SKIN_PARTS:
             for (pa, sa, ga) in items:
                 if pa == p:
-                    s = skin_check(ga[0], ga[2], P, m3)
-                    s["state"] = st
-                    skin.append(s)
+                    if sa not in skin_memo:
+                        skin_memo[sa] = skin_check(ga[0], ga[2], P, m3)
+                    skin.append({**skin_memo[sa], "state": st})
     C.write_json_atomic(pairs_file, pcache, indent=None)
+
+    # --------------------------------------------------------------- dock check: a head on a bay
+    dock = []
+    if not args.no_bar:
+        rb = cache.export_bar(1, "all")
+        gb = meshes.get(rb["sha"], rb["path"]) if rb["status"] == "ok" else None
+        if rb["status"] == "ok" and gb is None:
+            unreadable["bar"] = meshes.bad.get(rb["sha"])
+        if gb is not None:
+            ex = [BAY_ORIGIN0, "SHAKER_H", "hy((HOLE_U0 + HOLE_U1)/2)"]
+            o = C.eval_scad(ex, cache.base_defs + ["BAR_BAYS=1"], cache.dir / "_scad")
+            org, shaker, hole_y = o[ex[0]], float(o[ex[1]]), float(o[ex[2]])
+            dstates = [st for st in states if st["CHUCK_CLOSE"] == 1 and st["STATE_PULL"] in (0, 1)] or states[:1]
+            worst = {}
+            for st in dstates:
+                for p in live:
+                    r = res.get((p, C.state_key(st)))
+                    g = meshes.get(r["sha"], r["path"]) if r and r.get("status") == "ok" else None
+                    if g is None:
+                        continue
+                    v = max(0.0, (gb[0] ^ g[0].translate(list(map(float, org)))).volume())
+                    if v > worst.get(p, (-1, None))[0]:
+                        worst[p] = (v, st)
+            for p, (v, st) in sorted(worst.items(), key=lambda t: -t[1][0]):
+                dock.append({"what": f"bar x {p}", "mm3": round(v, 3), "state": st, "ok": v <= args.tol})
+            cup = m3.Manifold.cylinder(shaker, 45.0, 45.0, 128, False).translate([float(org[0]), float(org[1]) + hole_y, 0.0])
+            v = max(0.0, (gb[0] ^ cup).volume())
+            dock.append({"what": f"cup space (90 x {shaker:.0f} mm under the drop hole) x bar", "mm3": round(v, 3),
+                         "state": None, "ok": v <= args.tol})
 
     # --------------------------------------------------------------- verdicts
     rows, fails = [], []
@@ -292,7 +337,7 @@ def main(argv=None):
             if v <= lim and v > 1e-3:
                 verdict = "OK (touching, below tol)"
         if f["gap_min"] is not None and f["gap_min"] < 0.05 and v <= 1e-6:
-            verdict += "; zero clearance"
+            verdict += "; touching (0 gap)"
         show = args.all and f["overlap"] or v > 1e-3 or al is not None or (f["gap_min"] is not None)
         row = {"pair": pk, "max_mm3": round(v, 3), "state": f["state"], "limit": round(lim, 2),
                "allow_why": al[1] if al else None, "gap_min": f["gap_min"], "gap_state": f["gap_state"],
@@ -306,6 +351,7 @@ def main(argv=None):
             rows.append({"pair": pk, "max_mm3": None, "state": None, "limit": lim, "allow_why": why, "gap_min": None,
                          "gap_state": None, "verdict": "not checked (part missing)", "per_state": {}})
     skin_fail = [s for s in skin if s["outside_mm3"] > args.tol]
+    dock_fail = [d for d in dock if not d["ok"]]
 
     def fs(st):
         return C.fmt_state(st) if st else "-"
@@ -329,6 +375,16 @@ def main(argv=None):
               f" (puck R {P['PUCK_R']:.1f}, skin inner R {skin[0]['skin_inner_r']:.1f})")
     elif "slide" in parts:
         C.say("\nskin: slide not available (stub), skipped")
+    if dock:
+        C.say("\ndock (one bay, head at the bay origin; cup space under the drop hole):")
+        for d in dock:
+            if d["mm3"] > 1e-3 or not d["ok"] or d["what"].startswith("cup"):
+                C.say(f"  {d['what']:<58} {d['mm3']:>9.2f} mm3  {'OK' if d['ok'] else 'FAIL'}"
+                      + (f"  ({fs(d['state'])})" if d["state"] and d["mm3"] > 1e-3 else ""))
+        if all(d["mm3"] <= 1e-3 for d in dock if not d["what"].startswith("cup")):
+            C.say(f"  bar x head parts: no contact ({len(dock) - 1} parts checked)")
+    elif not args.no_bar:
+        C.say("\ndock: bar parts not available yet, skipped")
     if stubs:
         C.say(f"\nskipped (not implemented): {', '.join(stubs)}")
     if unreadable:
@@ -338,7 +394,7 @@ def main(argv=None):
     for p, e in errored.items():
         C.say(f"export error {p}: {'; '.join(e or [])[:300]}")
     status = 0
-    if fails or skin_fail or unreadable or errored:
+    if fails or skin_fail or dock_fail or unreadable or errored:
         status = 1
     n_pairs = len(findings)
     C.say(f"\n[fitcheck] {cache.preset}: {len(live)} parts{' + jar' if jar else ''}, {len(states)} states, "
@@ -346,6 +402,7 @@ def main(argv=None):
     C.say(f"RESULT: {'PASS' if status == 0 else 'FAIL'}"
           + (f"  ({len(fails)} interference failure(s))" if fails else "")
           + (f"  (skin violations in {len(skin_fail)} state(s))" if skin_fail else "")
+          + (f"  ({len(dock_fail)} dock/cup failure(s))" if dock_fail else "")
           + (f"  ({len(unreadable)} unreadable mesh(es))" if unreadable else "")
           + (f"  ({len(errored)} export error(s))" if errored else ""))
 
@@ -355,7 +412,7 @@ def main(argv=None):
         "deps": {p: deps.get(p) for p in parts}, "jar": bool(jar),
         "allowlist": {f"{a}|{b}": {"max_mm3": round(v[0], 2), "why": v[1]} for (a, b), v in allow.items()},
         "pairs": [{**r, "pair": list(r["pair"])} for r in rows], "fails": [list(r["pair"]) for r in fails],
-        "skin": skin, "result": "PASS" if status == 0 else "FAIL",
+        "skin": skin, "dock": dock, "result": "PASS" if status == 0 else "FAIL",
     }
     C.write_json_atomic(cache.dir / "report.json", report)
     md = [f"# Fit check: preset `{cache.preset}`", "",
@@ -372,6 +429,9 @@ def main(argv=None):
         md += ["", f"Skin: slide outside the puck (drawer opening excluded): max {worst['outside_mm3']:.2f} mm³ "
                    f"({fs(worst['state'])}); max radius behind the front {max(s['r_max'] for s in skin):.1f} mm "
                    f"(puck R {P['PUCK_R']:.1f}, skin inner {skin[0]['skin_inner_r']:.1f})."]
+    if dock:
+        md += ["", "Dock check (one bay, head at the bay origin):", ""]
+        md += [f"- {d['what']}: {d['mm3']:.2f} mm³ {'OK' if d['ok'] else '**FAIL**'}" for d in dock]
     if stubs:
         md += ["", f"Skipped (not implemented): {', '.join(stubs)}."]
     (cache.dir / "FITCHECK.md").write_text("\n".join(md) + "\n")

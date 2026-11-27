@@ -41,7 +41,7 @@ DENSITY = {"PLA": 1.24, "TPU": 1.21}        # g/cm3
 SHELL_MM = 1.2                              # perimeters + skins as an equivalent solid shell
 INFILL = 0.15                               # sparse infill fraction inside the shell
 STATE_VARS = ("STATE_PULL", "DIAL_ML", "CHUCK_CLOSE")
-TOOL_VERSION = "v5-tools-1"                 # bump to invalidate every cached export
+TOOL_VERSION = "v5-tools-2"                 # bump to invalidate every cached export
 
 _print_lock = threading.Lock()
 
@@ -321,6 +321,27 @@ def file_sha(path) -> str:
 
 
 _IDENT = re.compile(r"[A-Za-z_]\w*")
+_STR = re.compile(r'"(?:\\.|[^"\\])*"')
+
+
+def top_level_statements(text: str):
+    """Top-level statements of comment/string-stripped SCAD (module bodies stay whole)."""
+    out, buf, depth = [], [], 0
+    for c in text:
+        buf.append(c)
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            depth -= 1
+            if c == "}" and depth == 0:
+                out.append("".join(buf).strip())
+                buf = []
+        elif c == ";" and depth == 0:
+            out.append("".join(buf[:-1]).strip())
+            buf = []
+    if "".join(buf).strip():
+        out.append("".join(buf).strip())
+    return out
 
 
 class SourceIndex:
@@ -335,12 +356,15 @@ class SourceIndex:
 
     def __init__(self):
         self.files = sorted(PARTS_DIR.glob("*.scad"))
-        self.defs, self.uses, self.incl = {}, {}, {}
+        self.defs, self.uses, self.incl, self.modules, self.text = {}, {}, {}, set(), {}
         for f in self.files:
             raw = f.read_text()
             t = strip_scad_comments(raw)
             t_nostr = re.sub(r'"(?:\\.|[^"\\])*"', '""', t)
-            names = set(re.findall(r"\bmodule\s+([A-Za-z_]\w*)\s*\(", t_nostr))
+            self.text[f] = t_nostr
+            mods = set(re.findall(r"\bmodule\s+([A-Za-z_]\w*)\s*\(", t_nostr))
+            self.modules |= mods
+            names = set(mods)
             names |= set(re.findall(r"\bfunction\s+([A-Za-z_]\w*)\s*\(", t_nostr))
             names |= set(re.findall(r"^([A-Za-z_]\w*)\s*=", t_nostr, re.M))
             for n in names:
@@ -374,6 +398,60 @@ class SourceIndex:
                 if g not in seen:
                     todo.append(g)
         return sorted(seen)
+
+    def _taint(self) -> dict:
+        """{identifier: set of state variables it depends on}, over params, lib, entry and parts."""
+        if getattr(self, "_taint_cache", None) is not None:
+            return self._taint_cache
+        graph = {}
+        for f in [PARAMS, *sorted(LIB.glob("*.scad")), ENTRY, *self.files]:
+            t = _STR.sub('""', strip_scad_comments(f.read_text()))
+            for stmt in top_level_statements(t):
+                m = re.match(r"^([A-Za-z_]\w*)\s*=\s*(.*)$", stmt, re.S)
+                if m:
+                    graph.setdefault(m.group(1), set()).update(_IDENT.findall(m.group(2)))
+                    continue
+                m = re.match(r"^function\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*=\s*(.*)$", stmt, re.S)
+                if m:
+                    args = set(_IDENT.findall(m.group(2)))
+                    graph.setdefault(m.group(1), set()).update(set(_IDENT.findall(m.group(3))) - args)
+        taint = {v: {v} for v in STATE_VARS}
+        changed = True
+        while changed:
+            changed = False
+            for name, ids in graph.items():
+                t = set()
+                for i in ids:
+                    t |= taint.get(i, set())
+                if t - taint.get(name, set()):
+                    taint[name] = taint.get(name, set()) | t
+                    changed = True
+        self._taint_cache = taint
+        return taint
+
+    def state_deps(self, module_names) -> list:
+        """State variables (STATE_PULL, DIAL_ML, CHUCK_CLOSE) a module can depend on.
+
+        Static and conservative: a part depends on a state variable if any source
+        file it can reach names an identifier derived from that variable (SLIDE_Y0,
+        CH_L, DIAL_ANGLE, R_PIN, RING_PHI, ...). Never misses a dependency; at worst
+        a part is exported once more than needed.
+        """
+        taint = self._taint()
+        ids = set()
+        for f in self.closure(module_names):
+            ids |= self.uses.get(f, set())
+        return [v for v in STATE_VARS if any(v in taint.get(i, ()) for i in ids)]
+
+    def calls_in(self, module) -> list:
+        """Modules (defined in part files or the entry) called inside `module`'s body."""
+        known = self.modules | {"head_assembly", "jar_ghost", "posed", "printed"}
+        for f, t in self.text.items():
+            m = re.search(r"\bmodule\s+" + re.escape(module) + r"\s*\([^)]*\)\s*\{", t)
+            if m:
+                body = t[m.end():_match(t, m.end() - 1)]
+                return sorted({c for c in re.findall(r"\b([A-Za-z_]\w*)\s*\(", body) if c in known and c != module})
+        return []
 
     def fingerprint(self, module_names, defs, extra="") -> str:
         files = self.closure(module_names)
@@ -489,6 +567,20 @@ def stl_to_binary(src, dst):
     return dst
 
 
+def geom_sha(path) -> str:
+    """Hash of an STL's geometry that ignores facet order.
+
+    OpenSCAD/CGAL writes the same solid with its facets in a different order from
+    run to run, so a file hash cannot tell "same part" from "moved part". This
+    hashes the sorted set of vertices (rounded to 0.1 um), the facet count and the
+    volume, which is stable for identical geometry and changes when a part moves.
+    """
+    import numpy as np
+    m = load_mesh(path)
+    v = np.unique(np.round(np.asarray(m.vertices, dtype=np.float64), 4), axis=0)
+    return _sha(v.tobytes(), len(m.faces), f"{float(m.volume):.3f}")
+
+
 def write_json_atomic(path, obj, indent=1):
     path = Path(path)
     tmp = path.with_name(f".{path.name}.{os.getpid()}-{threading.get_ident()}.tmp")
@@ -506,7 +598,8 @@ class PosedCache:
 
     Cache key: (part, canonical state, preset). A part is only re-exported when
     a source it depends on changes. A part that does not depend on a state
-    variable (found by probing) is exported once for all values of it.
+    variable (static analysis, SourceIndex.state_deps) is exported once for all
+    values of it.
     """
 
     BASE = {"STATE_PULL": 0, "DIAL_ML": 0, "CHUCK_CLOSE": 0}
@@ -523,14 +616,10 @@ class PosedCache:
         self.text = entry_text()
         self.posed_names = dispatch_names("posed", self.text)
         self.registry = parts_registry(self.text)
-        self._deps_file = self.dir / "deps.json"
-        try:
-            self._deps = json.loads(self._deps_file.read_text())
-        except Exception:  # noqa: BLE001
-            self._deps = {}
-        self._lock = threading.Lock()
+        # head parts = PARTS registry entries that posed() can place (bay/leg/foot are bar parts;
+        # helper names such as jaw0 or params_json in posed() are not separate parts)
+        self.head_parts = [r["name"] for r in self.registry if r["name"] in self.posed_names]
         self.params = eval_scad(["V_MAX", "CLASS_NAME", "JAR_NAME"], self.base_defs, self.dir / "_scad")
-        self.probe = {"STATE_PULL": 1, "DIAL_ML": self.params["V_MAX"], "CHUCK_CLOSE": 1}
 
     # -- generic cached export ------------------------------------------------
     def _export(self, label, part_value, defs, modules, src=ENTRY, wrapper=None):
@@ -556,7 +645,7 @@ class PosedCache:
         meta = {"fingerprint": fp, "status": res.status, "seconds": round(res.seconds, 2),
                 "errors": res.errors[:8], "warnings": res.warnings[:8]}
         if res.status == "ok":
-            meta["sha"] = file_sha(out)
+            meta["sha"] = geom_sha(out)
         else:
             out.unlink(missing_ok=True)
         write_json_atomic(side, meta)
@@ -575,46 +664,8 @@ class PosedCache:
 
     # -- state dependence -------------------------------------------------------
     def deps(self, parts) -> dict:
-        """{part: [state vars it depends on]} or None if the part exports nothing (stub)."""
-        todo, out = [], {}
-        for p in parts:
-            fp = self.src.fingerprint([p], self.base_defs)
-            d = self._deps.get(p)
-            if d and d.get("fingerprint") == fp and not self.force:
-                out[p] = d["deps"]
-            else:
-                todo.append((p, fp))
-        if todo:
-            with ThreadPoolExecutor(max_workers=self.jobs) as ex:       # phase 1: rest state
-                base = dict(zip([p for p, _ in todo], ex.map(lambda t: self.export_state(t[0], self.BASE), todo)))
-            live = [p for p, _ in todo if base[p]["status"] == "ok"]
-            jobs = []
-            for p in live:                                              # phase 2: one probe per variable
-                for v in STATE_VARS:
-                    st = dict(self.BASE)
-                    st[v] = self.probe[v]
-                    jobs.append((p, v, st))
-            with ThreadPoolExecutor(max_workers=self.jobs) as ex:
-                res = list(ex.map(lambda j: (j, self.export_state(j[0], j[2])), jobs))
-            by = {}
-            for (p, v, _), r in res:
-                by.setdefault(p, {})[v] = r
-            for p, fp in todo:
-                r0 = base[p]
-                if r0["status"] != "ok":
-                    d = None if r0["status"] == "empty" else {"error": r0.get("errors")}
-                else:
-                    bad = [v for v in STATE_VARS if by[p][v]["status"] != "ok"]
-                    if bad:
-                        d = {"error": [f"export failed at {v} = {self.probe[v]}: " + "; ".join(by[p][v].get("errors") or [])
-                                       for v in bad]}
-                    else:
-                        d = [v for v in STATE_VARS if by[p][v]["sha"] != r0["sha"]]
-                out[p] = d
-                with self._lock:
-                    self._deps[p] = {"fingerprint": fp, "deps": d}
-            write_json_atomic(self._deps_file, self._deps)
-        return out
+        """{part: [state variables it moves with]} from static analysis of the sources."""
+        return {p: self.src.state_deps([p]) for p in parts}
 
     def canonical(self, part, state, deps):
         st = dict(self.BASE)
@@ -628,16 +679,12 @@ class PosedCache:
         deps = deps or self.deps(parts)
         uniq, mapping = {}, {}
         for p, st in part_states:
-            d = deps.get(p)
-            if d is None or isinstance(d, dict):
-                mapping[(p, state_key(st))] = None
-                continue
-            c = self.canonical(p, st, d)
+            c = self.canonical(p, st, deps.get(p))
             uniq[(p, state_key(c))] = (p, c)
             mapping[(p, state_key(st))] = (p, state_key(c))
         with ThreadPoolExecutor(max_workers=self.jobs) as ex:
             done = dict(zip(uniq.keys(), ex.map(lambda pc: self.export_state(*pc), uniq.values())))
-        return {k: (done[v] if v else None) for k, v in mapping.items()}
+        return {k: done[v] for k, v in mapping.items()}
 
     # -- jar ghost, powder fill, whole bar --------------------------------------
     def export_wrapper(self, label, body, extra_defs=()):
@@ -673,15 +720,24 @@ translate([0, 0, Z_RIM + 0.3]) intersection() {{
 """
         return self.export_wrapper(f"powder_{int(round(fill * 100))}", body)
 
-    def export_bar(self, bays=3, state=None):
-        st = {k: (state or {}).get(k, self.BASE[k]) for k in STATE_VARS}
-        return self._export(f"bar{bays}@{state_key(st)}", scad_str("bar"),
-                            self.base_defs + self._state_defs(st) + [f"BAR_BAYS={int(bays)}"],
-                            ["bar_assembly"])
+    def export_bar(self, bays=3, group="all"):
+        """bar_assembly(bays) WITHOUT the heads it docks: head_assembly() is overridden to
+        nothing, so the heads can be added part by part in their own colors.
+          group="all"   every bar part (plates, legs, trims, feet)
+          group="body"  everything but the feet (all PLA body color)
+          group="foot"  only the TPU feet (every other module bar_assembly calls is overridden)
+        """
+        over = {"head_assembly"}
+        if group == "body":
+            over |= {"foot"}
+        elif group == "foot":
+            over |= set(self.src.calls_in("bar_assembly")) - {"foot"}
+        body = "\n".join(f"module {m}() {{}}" for m in sorted(over)) + f"\nbar_assembly({int(bays)});"
+        return self.export_wrapper(f"bar{int(bays)}_{group}", body, [f"BAR_BAYS={int(bays)}"])
 
 
 def fmt_state(st) -> str:
-    return f"pull {float(st['STATE_PULL']):g} | dial {float(st['DIAL_ML']):g} mL | chuck {float(st['CHUCK_CLOSE']):g}"
+    return f"pull {float(st['STATE_PULL']):g}, dial {float(st['DIAL_ML']):g} mL, chuck {float(st['CHUCK_CLOSE']):g}"
 
 
 def require(mod):

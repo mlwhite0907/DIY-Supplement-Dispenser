@@ -36,7 +36,7 @@ Scene file keys (all optional except heads or bar):
   title, width, height, samples, look {render.html keys: exposure, key, dome, ...}
   heads: [{preset, state {STATE_PULL, DIAL_ML, CHUCK_CLOSE}, name, at [x,y,z] | "bay:<i>",
            jar (bool), powder (0..1 fill or false), only [...], hide [...],
-           explode {part: dz | [dx,dy,dz]}, explode_jar dz}]
+           explode {part: dz | [dx,dy,dz]}, explode_scale k, explode_jar dz}]
   layout: "row" (heads without "at" are placed side by side, gap in mm: layout_gap)
   bar: {preset, bays, state}, bay_origin: OpenSCAD expression of i (default below)
   camera: {dir, fov, fill, tags, shift} (see render.html)
@@ -60,17 +60,19 @@ SCENES = C.RENDER_DIR / "scenes"
 ASSETS = C.RENDER_DIR / "assets"
 OUT = C.V5 / "renders"
 DRAFT_OUT = C.BUILD / "renders_draft"
-DEFAULT_BAY_ORIGIN = "[(i - (BAR_BAYS - 1)/2)*BAY_W, 0, BAR_H]"
+# Bar coordinates (docs/v5/BUILD_BRIEFS.md, BAR): bay i is centred at x = i*BAY_W, the plate top is
+# at z = BAR_H and the head origin sits at (i*BAY_W, BAY_Y_HEAD, BAR_H).
+DEFAULT_BAY_ORIGIN = "[i*BAY_W, is_undef(BAY_Y_HEAD) ? 0 : BAY_Y_HEAD, BAR_H]"
 
 # Studio look shared by every scene (a scene's "look" overrides keys).
 LOOK = {
-    "toneMapping": "neutral", "exposure": 0.95, "env": 0.35,
+    "toneMapping": "neutral", "exposure": 0.9, "env": 0.3,
     "background": {"top": "#EFEBE4", "bottom": "#DAD4CA", "vignette": 0.12, "glow": [0.5, 0.46], "glowAmount": 0.07},
-    "key": {"dir": [-0.55, 0.78, 0.5], "intensity": 2.6, "soft": 0.22, "color": "#FFF9F2"},
-    "dome": {"intensity": 0.9, "minElevation": 18, "color": "#F4F7FF"},
-    "fill": {"dir": [0.95, 0.1, 0.55], "intensity": 0.22, "color": "#FFF3E6"},
+    "key": {"dir": [-0.55, 0.78, 0.5], "intensity": 3.0, "soft": 0.2, "color": "#FFF9F2"},
+    "dome": {"intensity": 1.1, "minElevation": 14, "color": "#F4F7FF"},
+    "fill": {"dir": [0.95, 0.1, 0.55], "intensity": 0.12, "color": "#FFF3E6"},
     "rim": {"dir": [0.25, 0.65, -1.0], "intensity": 0.9, "color": "#F3F6FF"},
-    "ground": {"shadow": 0.55},
+    "ground": {"shadow": 0.75},
     "creaseAngle": 32, "glassBackdrop": 0.8,
 }
 MATERIAL = {   # color role -> render material
@@ -129,7 +131,6 @@ class Scenes:
         self.registry = C.parts_registry(self.text)
         self.colors, self.roles, self.ink = role_colors(self.text, self.registry)
         self.caches = {}
-        self.notes = []
 
     def cache(self, preset, name):
         key = (C.preset_label(preset), name)
@@ -144,12 +145,13 @@ class Scenes:
         st = {"STATE_PULL": 0, "DIAL_ML": V / 2, "CHUCK_CLOSE": 1}
         st.update({k: float(v) for k, v in (h.get("state") or {}).items()})
         st["DIAL_ML"] = min(V, max(0.0, st["DIAL_ML"]))
-        names = [r["name"] for r in self.registry if r["name"] in cache.posed_names]
+        names = list(cache.head_parts)
         if h.get("only"):
             names = [n for n in names if n in h["only"]]
         names = [n for n in names if n not in (h.get("hide") or [])]
         res = cache.export_states([(n, st) for n in names])
         explode = h.get("explode") or {}
+        k_ex = float(h.get("explode_scale", 1.0))
         out, missing = [], []
         for n in names:
             r = res.get((n, C.state_key(st)))
@@ -159,11 +161,12 @@ class Scenes:
             role = self.roles.get(n, "body")
             off = explode.get(n, 0)
             off = [0, 0, off] if isinstance(off, (int, float)) else list(off)
+            off = [k_ex * o for o in off]
             color = self.ink.get(n) or self.colors.get(role, "#dddddd")
             out.append({"file": asset_for(r["path"], r["sha"]), "color": color, **MATERIAL.get(role, {}),
                         "pos": [at[0] + off[0], at[1] + off[1], at[2] + off[2]], "tag": n})
         if h.get("jar", True):
-            dz = h.get("explode_jar", 0)
+            dz = k_ex * float(h.get("explode_jar", 0))
             j = cache.export_jar()
             if j["status"] == "ok":
                 out.append({"file": asset_for(j["path"], j["sha"]), "kind": "glass", "tag": "jar",
@@ -207,11 +210,16 @@ class Scenes:
             parts += p
             missing |= set(miss)
         if bar:
-            st = {"STATE_PULL": 0, "DIAL_ML": 0, "CHUCK_CLOSE": 1}
-            r = bar_cache.export_bar(int(bar.get("bays", 3)), st)
-            if r["status"] == "ok":
-                parts.append({"file": asset_for(r["path"], r["sha"]), "color": self.colors.get("body", "#ECE8DF"),
+            n = int(bar.get("bays", 3))
+            body, feet = bar_cache.export_bar(n, "body"), bar_cache.export_bar(n, "foot")
+            if feet["status"] != "ok":            # feet only reachable through another module: one mesh
+                body, feet = bar_cache.export_bar(n, "all"), None
+            if body["status"] == "ok":
+                parts.append({"file": asset_for(body["path"], body["sha"]), "color": self.colors.get("body", "#ECE8DF"),
                               **MATERIAL["body"], "tag": "bar", "pos": [0, 0, 0]})
+                if feet:
+                    parts.append({"file": asset_for(feet["path"], feet["sha"]), "color": self.colors.get("tpu", "#3A3D42"),
+                                  **MATERIAL["tpu"], "tag": "foot", "pos": [0, 0, 0]})
             else:
                 missing.add("bar_assembly")
         scene = {**look, "width": sc.get("width", 1600), "height": sc.get("height", 1200),
@@ -233,7 +241,8 @@ def find_node():
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0],
-                                 formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
+                                 formatter_class=argparse.RawDescriptionHelpFormatter,
+                                 epilog=__doc__.split("\n\n", 1)[1])
     ap.add_argument("--scenes", default="")
     ap.add_argument("--samples", type=int, default=0)
     ap.add_argument("--draft", action="store_true")

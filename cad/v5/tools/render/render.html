@@ -25,8 +25,10 @@
     "parts": [{"file": "assets/x.stl", "kind": "plastic"|"rubber"|"glass"|"powder",
                "color": "#ECE8DF", "rough": 0.5, "pos": [0,0,0], "rot": [0,0,0], "tag": "dial", "shadow": true}],
     "camera": {"dir": [-0.8, -1.2, 0.7], "fov": 26, "fill": 0.82, "tags": ["dial"], "shift": [0, 0],
-               "pos": null, "target": null}
+               "pos": null, "target": null, "aperture": 0, "focus": null}
   }
+  camera.aperture (lens radius, mm) adds depth of field focused on camera.focus
+  (an OpenSCAD point; default the subject centre).
   "space": "camera" means dir = [right, up, toward camera]; "world" means OpenSCAD x, y, z.
   camera.dir points from the subject to the camera; the distance is solved so the
   subject (all parts, or only parts whose tag is in camera.tags) fills `fill` of
@@ -273,12 +275,28 @@ const keyV = new THREE.Vector3().crossVectors(keyDir, keyU).normalize();
 const soft = keyCfg.soft ?? 0.16;                               // angular radius of the softbox (rad)
 const minEl = (domeCfg.minElevation ?? 18) * Math.PI / 180;
 
+// depth of field: the camera moves over a lens disc while the frustum is shifted so the focus
+// plane stays registered (camera.aperture = lens radius in mm, camera.focus = point in focus)
+const aperture = cam.isPerspectiveCamera ? (cfg.camera.aperture || 0) : 0;
+const viewDir = new THREE.Vector3().copy(camBack).negate();
+const focusPt = cfg.camera.focus ? z2y(cfg.camera.focus) : center.clone();
+const focusDist = Math.max(1, focusPt.clone().sub(cam.position).dot(viewDir));
+const pxPerMM = H / (2 * focusDist * Math.tan((cam.fov || fov) * Math.PI / 360));
+const camBase = cam.position.clone();
+
 renderer.setRenderTarget(accRT); renderer.setClearColor(0x000000, 0); renderer.clear();
-log(`setup done, ${N} samples at ${W}x${H}`);
+log(`setup done, ${N} samples at ${W}x${H}` + (aperture ? `, aperture ${aperture} mm focus ${focusDist.toFixed(0)} mm` : ''));
 for (let i = 0; i < N; i++) {
   const k = i + 1;
   const jx = halton(k, 2) - 0.5, jy = halton(k, 3) - 0.5;          // sub-pixel jitter (anti-aliasing)
-  if (cam.isPerspectiveCamera) cam.setViewOffset(W, H, jx, jy, W, H);
+  let dx = 0, dy = 0;
+  if (aperture > 0) {
+    const rr = aperture * Math.sqrt(halton(k, 17)), tt = 2 * Math.PI * halton(k, 19);
+    dx = rr * Math.cos(tt); dy = rr * Math.sin(tt);
+    cam.position.copy(camBase).addScaledVector(camRight, dx).addScaledVector(camUp, dy);
+    cam.updateMatrixWorld(true);
+  }
+  if (cam.isPerspectiveCamera) cam.setViewOffset(W, H, jx - dx * pxPerMM, jy + dy * pxPerMM, W, H);
   const r = soft * Math.sqrt(halton(k, 5)), th = 2 * Math.PI * halton(k, 7);   // point on the softbox
   const kd = keyDir.clone().addScaledVector(keyU, r * Math.cos(th)).addScaledVector(keyV, r * Math.sin(th)).normalize();
   key.position.copy(center).addScaledVector(kd, L);

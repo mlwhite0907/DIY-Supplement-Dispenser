@@ -2,7 +2,6 @@
  "title": "The bar: three std heads on three bays",
  "width": 1800, "height": 1100, "samples": 64,
  "bar": {"preset": "std", "bays": 3},
- "bay_origin": "[(i - (BAR_BAYS - 1)/2)*BAY_W, 0, BAR_H]",
  "heads": [
   {"preset": "std", "name": "WHEY", "at": "bay:0", "state": {"DIAL_ML": 30}, "powder": 0.7},
   {"preset": "std", "name": "CREATINE", "at": "bay:1", "state": {"DIAL_ML": 5}, "powder": 0.45},

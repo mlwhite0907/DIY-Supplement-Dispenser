@@ -1,22 +1,16 @@
 {
- "title": "Exploded view: every part of one head, offset along z",
+ "title": "Exploded view: every part of one head, offset along z (same order as the 3D viewer)",
  "width": 1200, "height": 1600, "samples": 72,
  "heads": [
   {"preset": "std", "name": "WHEY", "state": {"STATE_PULL": 0, "DIAL_ML": 20, "CHUCK_CLOSE": 1}, "jar": true, "powder": 0.62,
+   "explode_scale": 1.45,
    "explode": {
-     "stop_pin": -34,
-     "base": 0,
-     "band": 46, "slide": 46, "plunger": 46, "dial": 46, "dial_inlay": 46, "detent": 46, "name_plate": 46, "name_inlay": 46,
-     "pinion": 30,
-     "stir_post": 100,
-     "wiper": 118,
-     "deck": 150,
-     "ring": 205,
-     "guide_plate": 245,
-     "jaw": 280, "jaw_pad": 280,
-     "gasket": 300
+     "stop_pin": -85, "base": -45, "pinion": -22, "band": -10,
+     "slide": 0, "plunger": 0, "name_plate": 0, "name_inlay": 0, "detent": 14,
+     "wiper": 28, "dial": 30, "dial_inlay": 30, "deck": 42, "stir_post": 72,
+     "ring": 78, "guide_plate": 108, "gasket": 122, "jaw": 135, "jaw_pad": 135
    },
-   "explode_jar": 345}
+   "explode_jar": 175}
  ],
  "camera": {"dir": [-0.75, -1.25, 0.72], "fov": 24, "fill": 0.86},
  "look": {"ground": {"shadow": 0.4}}

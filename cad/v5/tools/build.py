@@ -31,7 +31,10 @@ What it does:
         shell = min(V, surface_area * 1.2 mm); grams = density * (shell + 0.15 * (V - shell))
         density PLA 1.24, TPU 1.21 g/cm3.
   * Writes <out>/<preset>/manifest.json and PARTS.md (part, material, color role,
-    qty, grams each/total, bbox, status) with totals per head and per bay.
+    qty, grams each/total, bbox, status) with totals per head and per bay (by
+    material and by AMS color) and a suggested plate grouping per filament.
+  * --parts rebuilds only those parts; the rest of the previous build stays in
+    the manifest (flagged "stale" if its sources changed since).
   * A part whose module is still an empty stub (OpenSCAD: "Current top level object
     is empty") is listed as "not implemented" and skipped.
   * Unchanged parts are not re-exported: each STL is keyed by a fingerprint of the
@@ -156,6 +159,20 @@ def plan(preset: str, args, text: str) -> tuple:
                                "qty": r["qty"], "color": r["color"], "material": r["material"]})
             else:
                 jobs.append(job)
+    if args.parts:
+        # keep the rest of the previous build in the manifest so PARTS.md stays complete
+        for (part, nm), prev in old.items():
+            if part in want or (part not in by and part not in printable):
+                continue
+            r = by.get(part) or {"material": prev.get("material", "PLA"), "qty": prev.get("qty", 0),
+                                 "color": prev.get("color", "body")}
+            defs = base + [f"NAME={C.scad_str(nm if nm is not None else names[0])}", f"PART={C.scad_str(part)}"]
+            fresh = src.fingerprint([f"{part}_print", part], defs) == prev.get("fingerprint")
+            rec = {**prev, "cached": True, "head": part in posed, "registry": part in by,
+                   "qty": r["qty"], "color": r["color"], "material": r["material"]}
+            if not fresh and rec.get("status") == "ok":
+                rec["warnings_geom"] = list(rec.get("warnings_geom") or []) + ["stale: sources changed since this STL was built"]
+            reused.append(rec)
     return label, vals, outdir, jobs, reused, names
 
 
@@ -326,7 +343,8 @@ def summarize(label, vals, outdir, recs, names, colors, args, dims):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0],
-                                 formatter_class=argparse.RawDescriptionHelpFormatter, epilog=__doc__)
+                                 formatter_class=argparse.RawDescriptionHelpFormatter,
+                                 epilog=__doc__.split("\n\n", 1)[1])
     ap.add_argument("--preset", default="std")
     ap.add_argument("--parts", default="")
     ap.add_argument("--name", default="")

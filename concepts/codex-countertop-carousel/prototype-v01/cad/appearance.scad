@@ -26,9 +26,9 @@ module body(){
         wedge(body_h);
         translate([0,0,3])wedge(body_h,3);
         // Window cut through metallic skin. Continuous liner visible behind it.
-        translate([0,-149,74])rotate([90,0,0])roundbox([35,52,25],3);
+        translate([0,-130,74])rotate([90,0,0])roundbox([52,54,35],3);
         // Wheel recess. Sized for envelope only, not a shaft/bearing/seal interface.
-        translate([0,-149,24])rotate([90,0,0])roundbox([55,27,28],7);
+        translate([0,-120,24])rotate([90,0,0])roundbox([72,27,45],7);
     }
 }
 module liner(){
@@ -45,7 +45,7 @@ module lid(){
 }
 module wheel(){
     difference(){
-        union(){cylinder(d=45,h=18);for(a=[0:30:330])rotate(a)translate([21,0,1])cylinder(d=5,h=16,$fn=24);}
+        union(){cylinder(d=60,h=18);for(a=[0:30:330])rotate(a)translate([28.5,0,1])cylinder(d=5,h=16,$fn=24);}
         translate([0,0,-1])cylinder(d=6.4,h=20);
     }
 }
@@ -55,7 +55,7 @@ module cartridge(index=0){
     color(silver)body();
     color(window_color)translate([0,0,2])liner();
     color(black)translate([0,0,body_h+(exploded?35:0)])lid();
-    color(black)translate([0,-138-(exploded?35:0),15])wheel();
+    color(black)translate([0,-132-(exploded?35:0),15])wheel();
     color(black)translate([0,0,-6])foot();
     color([.16,.17,.18])label_text(labels[index%6]);
 }

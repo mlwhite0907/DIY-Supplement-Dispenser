@@ -24,7 +24,7 @@ for part in parts:
 
 scenes=[('assembled','assembly',[]),('single-tier','single',[]),('separated-tiers','separated',[]),('cartridge','cartridge',[]),('removed-cartridge','assembly',['-D','removed=true']),('exploded-cartridge','cartridge',['-D','exploded=true'])]
 for name,scene,extra in scenes:
-    cmd=['xvfb-run','-a','openscad','-o',str(IMG/f'{name}.png'),'--imgsize=1600,1400','--projection=o','--viewall','--autocenter','--camera=0,0,0,72,0,18,1000','--colorscheme=Tomorrow','-D',f'part="{scene}"',*extra,str(CAD)]
+    cmd=['xvfb-run','-a','openscad','-o',str(IMG/f'{name}.png'),'--imgsize=1600,1400','--projection=o','--viewall','--autocenter','--camera=0,0,0,78,0,15,1000','--colorscheme=Tomorrow','-D',f'part="{scene}"',*extra,str(CAD)]
     run=subprocess.run(cmd,capture_output=True,text=True,timeout=180)
     (REPORT/f'render-{name}.txt').write_text(run.stdout+run.stderr)
     if run.returncode or 'ERROR:' in run.stderr: raise RuntimeError(run.stderr)

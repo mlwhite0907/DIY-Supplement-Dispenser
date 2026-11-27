@@ -1,0 +1,125 @@
+{
+ "key": "std",
+ "preset": "std",
+ "class_v": 40,
+ "v_max": 40,
+ "ml_per_click": 1,
+ "clicks": 40,
+ "puck_d": 157.5,
+ "stroke": 37.4159,
+ "neck_od": 108,
+ "bay_w": 169.5,
+ "bar_h": 232,
+ "kin": {
+  "stroke": 37.4159,
+  "l_max": 31.4159,
+  "v_max": 40,
+  "ml_per_click": 1,
+  "click_deg": 7.5,
+  "dial_axis": [
+   0,
+   -98.75005
+  ],
+  "ring_phi_open": 0,
+  "ring_phi_closed": -75.0,
+  "r_pin_open": 72.5,
+  "r_pin_closed": 66,
+  "jaw_angles": [
+   270,
+   30,
+   150
+  ]
+ },
+ "parts": {
+  "base": {
+   "role": "body",
+   "group": "static",
+   "label": "Base: floor, drop hole, band posts",
+   "material": "PLA",
+   "explode": -45
+  },
+  "deck": {
+   "role": "body",
+   "group": "static",
+   "label": "Deck: strike-off edge and funnel",
+   "material": "PLA",
+   "explode": 42
+  },
+  "slide": {
+   "role": "body",
+   "group": "slide",
+   "label": "Drawer (dose chamber inside)",
+   "material": "PLA",
+   "explode": 0
+  },
+  "dial": {
+   "role": "accent",
+   "group": "dial",
+   "label": "Dose dial (mL)",
+   "material": "PLA",
+   "explode": 30
+  },
+  "ring": {
+   "role": "accent",
+   "group": "ring",
+   "label": "Twist ring (clockwise = lock)",
+   "material": "PLA",
+   "explode": 78
+  },
+  "jaw0": {
+   "role": "accent",
+   "group": "jaw",
+   "label": "Jaw",
+   "material": "PLA",
+   "explode": 135,
+   "angle": 270
+  },
+  "jaw1": {
+   "role": "accent",
+   "group": "jaw",
+   "label": "Jaw",
+   "material": "PLA",
+   "explode": 135,
+   "angle": 30
+  },
+  "jaw2": {
+   "role": "accent",
+   "group": "jaw",
+   "label": "Jaw",
+   "material": "PLA",
+   "explode": 135,
+   "angle": 150
+  },
+  "jar": {
+   "role": "glass",
+   "group": "jar",
+   "label": "Your glass jar, upside down",
+   "material": "glass",
+   "explode": 235
+  },
+  "powder": {
+   "role": "powder",
+   "group": "jar",
+   "label": "Powder",
+   "material": "",
+   "explode": 235
+  }
+ },
+ "missing": [
+  "stop_pin",
+  "wiper",
+  "plunger",
+  "detent",
+  "stir_post",
+  "name_plate",
+  "name_inlay",
+  "dial_inlay",
+  "pinion",
+  "band",
+  "guide_plate",
+  "gasket",
+  "jaw_pad0",
+  "jaw_pad1",
+  "jaw_pad2"
+ ]
+}

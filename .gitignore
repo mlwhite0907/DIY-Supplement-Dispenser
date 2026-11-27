@@ -42,5 +42,5 @@ secrets.json
 *.local.yaml
 cad/v5/tools/render/node_modules/
 cad/v5/tools/render/assets/
-cad/v5/build/
+cad/v6/build/
 __pycache__/

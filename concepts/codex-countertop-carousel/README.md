@@ -1,5 +1,7 @@
 # Countertop supplement carousel
 
+> **Current design: [12-cartridge V01 model and previews](prototype-v01/README.md), six per tier.** See [HANDOFF.md](HANDOFF.md) for Michael's latest requirements and continuation instructions. The five-per-tier text and drawing below are preserved as the initial study, superseded on November 27, 2026. The current visual model is not yet a validated mechanical dispenser.
+
 **Independent Codex concept, 27 November 2026.** A two-tier, manually rotating carousel with ten removable, individually dialed powder cartridges. Each five-cartridge tier can be separated and used on its own; a separate under-cabinet mount is a design goal. This is an early design study, not a print-ready dispenser or a change to the current Phase 1 design.
 
 ![Concept layout](concept-layout.svg)

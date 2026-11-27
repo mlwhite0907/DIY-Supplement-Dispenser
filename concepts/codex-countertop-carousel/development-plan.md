@@ -1,5 +1,7 @@
 # Development plan
 
+Historical five-per-tier plan. Current count is six per tier, twelve total. Follow [HANDOFF.md](HANDOFF.md) and [prototype-v01](prototype-v01/README.md) for current geometry and unresolved work.
+
 ## Experience and architecture
 
 **Countertop:** Rotate either tier, read the label/window, release a cartridge, hold it above a cup on a scale, unlock its dial and turn until the scale reaches the desired amount. Close the dial, replace the cartridge, and confirm its latch. The base stays on the counter; the cup is separate from the rotating assembly so hand forces do not disturb the reading.

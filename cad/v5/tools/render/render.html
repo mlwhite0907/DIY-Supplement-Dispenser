@@ -28,7 +28,7 @@
                "pos": null, "target": null, "aperture": 0, "focus": null}
   }
   camera.aperture (lens radius, mm) adds depth of field focused on camera.focus
-  (an OpenSCAD point; default the subject centre).
+  (an OpenSCAD point; default the centre of the framed subject, e.g. the tagged dial).
   "space": "camera" means dir = [right, up, toward camera]; "world" means OpenSCAD x, y, z.
   camera.dir points from the subject to the camera; the distance is solved so the
   subject (all parts, or only parts whose tag is in camera.tags) fills `fill` of
@@ -148,11 +148,14 @@ function subjectPoints() {
   }
   return pts;
 }
+let subjectCenter = center.clone();
 if (cfg.camera.pos && cfg.camera.target) {
   cam.position.copy(z2y(cfg.camera.pos)); cam.up.set(0, 1, 0); cam.lookAt(z2y(cfg.camera.target));
+  subjectCenter = z2y(cfg.camera.target);
 } else if (cam.isPerspectiveCamera) {
   const pts = subjectPoints();
   const sb = new THREE.Box3().setFromPoints(pts);
+  subjectCenter = sb.getCenter(new THREE.Vector3());
   const target = cfg.camera.target ? z2y(cfg.camera.target) : sb.getCenter(new THREE.Vector3());
   const dir = z2y(cfg.camera.dir || [-0.8, -1.2, 0.7]).normalize();
   const fill = cfg.camera.fill ?? 0.82;
@@ -279,7 +282,7 @@ const minEl = (domeCfg.minElevation ?? 18) * Math.PI / 180;
 // plane stays registered (camera.aperture = lens radius in mm, camera.focus = point in focus)
 const aperture = cam.isPerspectiveCamera ? (cfg.camera.aperture || 0) : 0;
 const viewDir = new THREE.Vector3().copy(camBack).negate();
-const focusPt = cfg.camera.focus ? z2y(cfg.camera.focus) : center.clone();
+const focusPt = cfg.camera.focus ? z2y(cfg.camera.focus) : subjectCenter.clone();
 const focusDist = Math.max(1, focusPt.clone().sub(cam.position).dot(viewDir));
 const pxPerMM = H / (2 * focusDist * Math.tan((cam.fov || fov) * Math.PI / 360));
 const camBase = cam.position.clone();

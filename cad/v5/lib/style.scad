@@ -83,3 +83,14 @@ module screw_from_below(d_clear, head_d, head_h, len) {
     translate([0,0,-EPS]) cylinder(d=head_d, h=head_h+EPS, $fn=32);
     cylinder(d=d_clear, h=len, $fn=24);
 }
+
+// Extrude a 2D child with stepped chamfers (one step per 0.2 mm layer: exactly what the
+// slicer prints). Works for any outline, holes included. cb = bottom, ct = top chamfer.
+module cx(h, cb=0, ct=0) {
+    L = 0.2; nb = round(cb/L); nt = round(ct/L);
+    for (i = [0:1:nb-1]) translate([0,0,i*L]) linear_extrude(L + 0.001) offset(delta=-(cb - i*L)) children();
+    translate([0,0,nb*L]) linear_extrude(h - (nb + nt)*L + 0.001) children();
+    for (i = [0:1:nt-1]) translate([0,0,h - (i+1)*L - 0.001]) linear_extrude(L + 0.001) offset(delta=-(ct - i*L)) children();
+}
+// box from [x0,y0,z0] to [x1,y1,z1]
+module bx(a, b) { translate([min(a[0],b[0]), min(a[1],b[1]), min(a[2],b[2])]) cube([abs(b[0]-a[0]), abs(b[1]-a[1]), abs(b[2]-a[2])]); }

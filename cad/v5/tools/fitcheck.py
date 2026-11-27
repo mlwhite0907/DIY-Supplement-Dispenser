@@ -94,7 +94,7 @@ PARAMS_NEEDED = ["V_MAX", "PUCK_R", "SKIN_T", "Z_RING_TOP", "CHAN_HW", "HANDLE_W
                  "GASKET_OD", "GASKET_ID", "GASKET_T", "GASKET_PROUD", "STROKE", "CLASS_NAME",
                  "CH_W", "HOLE_R", "Z_FLOOR", "hy(HOLE_U0)", "hy(HOLE_U1)"]
 # optional (pedestal era); missing names just disable the checks that need them
-PARAMS_OPTIONAL = ["CUP_BOT_Z", "CUP_FLOOR_T", "CUP_TOP_Z", "ROW_PITCH"]
+PARAMS_OPTIONAL = ["CUP_BOT_Z", "CUP_FLOOR_T", "CUP_TOP_Z", "ROW_PITCH", "PILL_YC_FRONT", "PILL_YC_REAR"]
 SKIN_PARTS = ["slide"]
 
 
@@ -103,11 +103,16 @@ def pair_key(a, b):
 
 
 def matrix(V, quick=False):
+    """STATE_PULL x DIAL_ML x CHUCK_CLOSE (+ two states with the dose drawer slid out, v5.1)."""
     if quick:
         pts = [(0, 0, 0), (0, V, 1), (1, 0, 1), (1, V, 0), (0.5, V / 2, 1)]
     else:
         pts = list(itertools.product((0, 0.5, 1), (0, V / 2, V), (0, 1)))
-    return [dict(zip(C.STATE_VARS, p)) for p in pts]
+    states = [dict(zip(C.BASE_STATE_VARS, p), DRAWER_OUT=0) for p in pts]
+    if "DRAWER_OUT" in C.STATE_VARS:
+        extra = [(0, V / 2, 1)] if quick else [(0, 0, 1), (1, V, 0)]
+        states += [dict(zip(C.BASE_STATE_VARS, p), DRAWER_OUT=1) for p in extra]
+    return states
 
 
 class Meshes:
@@ -143,25 +148,36 @@ def boxes_overlap(b1, b2, margin=0.0):
 
 
 def skin_check(slide_mf, slide_tm, P, m3):
-    """Volume of the slide outside the puck cylinder, excluding the drawer opening zone."""
-    R, ztop = P["PUCK_R"], P["Z_RING_TOP"]
-    hw = P["CHAN_HW"] + 0.5                         # drawer opening half width
-    y1 = -math.sqrt(max(R * R - hw * hw, 0.0))     # where the opening's sides meet the skin
-    big = 4 * R + 400
-    cyl = m3.Manifold.cylinder(ztop, R, R, 720, False)
-    out = slide_mf - cyl
-    opening = m3.Manifold.cube([2 * hw, big, big], True).translate([0, y1 - big / 2, 0])
-    front = m3.Manifold.cube([big, big, big], True).translate([0, -R - big / 2, 0])
-    viol = (out - opening) - front
+    """Volume of the slide outside the body skin, except the drawer front.
+
+    Skin: a cylinder of radius PUCK_R from z = 0 to Z_RING_TOP, or, when params defines
+    the v5.1 pill (PILL_YC_FRONT / PILL_YC_REAR), the stadium of two such circles.
+    Excused: the front (y < front centre) within the drawer front's width
+    (|x| <= HANDLE_W/2 + 0.5), where the drawer front and the neck that passes through
+    the drawer opening live. Pokes through the sides or the rear count.
+    """
+    R, ztop = float(P["PUCK_R"]), float(P["Z_RING_TOP"])
+    yf = float(P["PILL_YC_FRONT"]) if P.get("PILL_YC_FRONT") is not None else 0.0
+    yr = float(P["PILL_YC_REAR"]) if P.get("PILL_YC_REAR") is not None else 0.0
+    hw = float(P["HANDLE_W"]) / 2 + 0.5
+    big = 4 * R + 800
+    c1 = m3.Manifold.cylinder(ztop, R, R, 720, False).translate([0.0, yf, 0.0])
+    body = c1 if abs(yr - yf) < 1e-6 else m3.Manifold.batch_hull(
+        [c1, m3.Manifold.cylinder(ztop, R, R, 720, False).translate([0.0, yr, 0.0])])
+    out = slide_mf - body
+    front = m3.Manifold.cube([2 * hw, big, big], True).translate([0.0, yf - big / 2, 0.0])
+    viol = out - front
     vol = viol.volume()
     np = C.require("numpy")
     v = np.asarray(slide_tm.vertices)
-    inside_zone = ~((np.abs(v[:, 0]) <= hw) & (v[:, 1] <= y1)) & (v[:, 1] >= -R)
-    rmax = float(np.sqrt((v[inside_zone, 0] ** 2 + v[inside_zone, 1] ** 2)).max()) if inside_zone.any() else 0.0
+    zone = ~((np.abs(v[:, 0]) <= hw) & (v[:, 1] < yf))
+    dy = np.maximum(0.0, np.maximum(v[:, 1] - yr, yf - v[:, 1]))
+    reach = np.sqrt(v[:, 0] ** 2 + dy ** 2)          # distance from the pill's spine
+    rmax = float(reach[zone].max()) if zone.any() else 0.0
     zmin, zmax = float(v[:, 2].min()), float(v[:, 2].max())
-    bb = viol.bounding_box() if vol > 1e-6 else None
-    return {"outside_mm3": round(vol, 3), "r_max": round(rmax, 2), "skin_inner_r": round(R - P["SKIN_T"], 2),
-            "z_range": [round(zmin, 2), round(zmax, 2)], "violation_bbox": bb}
+    bb = [round(c, 1) for c in viol.bounding_box()] if vol > 1e-6 else None
+    return {"outside_mm3": round(vol, 3), "r_max": round(rmax, 2), "skin_inner_r": round(R - float(P["SKIN_T"]), 2),
+            "z_range": [round(zmin, 2), round(zmax, 2)], "violation_bbox": bb, "pill": abs(yr - yf) > 1e-6}
 
 
 def main(argv=None):
@@ -238,8 +254,14 @@ def main(argv=None):
         pcache = {}
 
     allow = {}
+    known = set(cache.head_parts) | {"jar"}
     for a, b, fn, why in ALLOWLIST:
-        allow[pair_key(a, b)] = (float(fn(P)), why)
+        if a not in known or b not in known:        # part no longer in the PARTS registry
+            continue
+        try:
+            allow[pair_key(a, b)] = (float(fn(P)), why)
+        except (KeyError, TypeError):               # a param it needs is gone: fall back to the tolerance
+            allow[pair_key(a, b)] = (args.tol, why + " (bound unavailable)")
     for spec in args.allow:
         try:
             ab, vol = spec.split("=")
@@ -322,7 +344,7 @@ def main(argv=None):
         cs = m3.CrossSection.square([w, l], True).offset(-r, m3.JoinType.Miter).offset(r, m3.JoinType.Round, 2.0, 48)
         col = m3.Manifold.extrude(cs, zt - zb).translate([0.0, (y0 + y1) / 2, zb])
         worst = {}
-        for st in [s_ for s_ in states if s_["STATE_PULL"] in (0, 1)] or states:
+        for st in [s_ for s_ in states if s_["STATE_PULL"] in (0, 1) and not s_.get("DRAWER_OUT")] or states:
             for p in live:
                 r_ = res.get((p, C.state_key(st)))
                 g = meshes.get(r_["sha"], r_["path"]) if r_ and r_.get("status") == "ok" else None
@@ -336,12 +358,13 @@ def main(argv=None):
         drop_info = f"{w:.0f} x {l:.0f} mm column, z {zb:.1f} .. {zt:.1f}"
 
     # --------------------------------------------------------------- row: two heads side by side
-    row = []
+    row_hits = []
     if not args.no_row and P.get("ROW_PITCH") is not None:
         rr = cache.export_row(2)
         gj = meshes.get(rr["sha"], rr["path"]) if rr["status"] == "ok" else None
         pitch = float(P["ROW_PITCH"])
-        st = next((s_ for s_ in states if s_["STATE_PULL"] == 0 and s_["CHUCK_CLOSE"] == 1), states[0])
+        st = next((s_ for s_ in states if s_["STATE_PULL"] == 0 and s_["CHUCK_CLOSE"] == 1
+                   and not s_.get("DRAWER_OUT")), states[0])
         heads = []
         for p in live:
             r_ = res.get((p, C.state_key(st)))
@@ -359,13 +382,13 @@ def main(argv=None):
                     continue
                 v = max(0.0, (ga[0] ^ gb[0].translate([pitch, 0.0, 0.0])).volume())
                 if v > 1e-3:
-                    row.append({"what": f"head0.{pa} x head1.{pb}", "mm3": round(v, 3), "ok": v <= args.tol})
+                    row_hits.append({"what": f"head0.{pa} x head1.{pb}", "mm3": round(v, 3), "ok": v <= args.tol})
         if gj is not None:
             for p, g in heads:
                 for k in (0, 1):
                     v = max(0.0, (gj[0] ^ g[0].translate([k * pitch, 0.0, 0.0])).volume())
                     if v > 1e-3:
-                        row.append({"what": f"joiner x head{k}.{p}", "mm3": round(v, 3), "ok": v <= args.tol})
+                        row_hits.append({"what": f"joiner x head{k}.{p}", "mm3": round(v, 3), "ok": v <= args.tol})
         row_info = (f"pitch {pitch:.1f} mm, joiners {'present' if gj is not None else 'not implemented'}, "
                     f"{len(heads)} parts per head")
 
@@ -398,7 +421,7 @@ def main(argv=None):
                          "gap_state": None, "verdict": "not checked (part missing)", "per_state": {}})
     skin_fail = [s for s in skin if s["outside_mm3"] > args.tol]
     drop_fail = [d for d in drop if not d["ok"]]
-    row_fail = [d for d in row if not d["ok"]]
+    row_fail = [d for d in row_hits if not d["ok"]]
 
     def fs(st):
         return C.fmt_state(st) if st else "-"
@@ -417,9 +440,14 @@ def main(argv=None):
     if skin:
         worst = max(skin, key=lambda s: s["outside_mm3"])
         C.say("")
-        C.say(f"skin: slide outside the puck (excluding the drawer opening): max {worst['outside_mm3']:.2f} mm3"
-              f" at {fs(worst['state'])}; slide reaches r = {max(s['r_max'] for s in skin):.1f} mm behind the front"
-              f" (puck R {P['PUCK_R']:.1f}, skin inner R {skin[0]['skin_inner_r']:.1f})")
+        C.say(f"skin: slide outside the {'pill' if worst.get('pill') else 'puck'} (drawer front excluded): "
+              f"max {worst['outside_mm3']:.2f} mm3 at {fs(worst['state'])}; outside the drawer-front zone the slide "
+              f"reaches r = {max(s['r_max'] for s in skin):.1f} mm (skin R {float(P['PUCK_R']):.1f}, "
+              f"inner R {skin[0]['skin_inner_r']:.1f})")
+        if worst["violation_bbox"]:
+            b = worst["violation_bbox"]
+            C.say(f"      where: x {b[0]}..{b[3]}, y {b[1]}..{b[4]}, z {b[2]}..{b[5]}  "
+                  f"({'FAIL' if worst['outside_mm3'] > args.tol else 'OK'})")
     elif "slide" in parts:
         C.say("\nskin: slide not available (stub), skipped")
     if not args.no_drop:
@@ -429,11 +457,11 @@ def main(argv=None):
             C.say(f"  blocked by {d['what']:<14} {d['mm3']:>9.2f} mm3  {'OK (< tol)' if d['ok'] else 'FAIL'}  ({fs(d['state'])})")
         if not blocked:
             C.say(f"  clear ({len(drop)} parts checked)")
-    if row or (not args.no_row and P.get("ROW_PITCH") is not None):
+    if row_hits or (not args.no_row and P.get("ROW_PITCH") is not None):
         C.say(f"\nrow (two heads side by side; {row_info}):")
-        for d in row:
+        for d in row_hits:
             C.say(f"  {d['what']:<40} {d['mm3']:>9.2f} mm3  {'OK (< tol)' if d['ok'] else 'FAIL'}")
-        if not row:
+        if not row_hits:
             C.say("  no contact between neighbouring heads or joiners")
     if stubs:
         C.say(f"\nskipped (not implemented): {', '.join(stubs)}")
@@ -463,7 +491,7 @@ def main(argv=None):
         "deps": {p: deps.get(p) for p in parts}, "jar": bool(jar),
         "allowlist": {f"{a}|{b}": {"max_mm3": round(v[0], 2), "why": v[1]} for (a, b), v in allow.items()},
         "pairs": [{**r, "pair": list(r["pair"])} for r in rows], "fails": [list(r["pair"]) for r in fails],
-        "skin": skin, "drop_path": drop, "row": row, "result": "PASS" if status == 0 else "FAIL",
+        "skin": skin, "drop_path": drop, "row": row_hits, "result": "PASS" if status == 0 else "FAIL",
     }
     C.write_json_atomic(cache.dir / "report.json", report)
     md = [f"# Fit check: preset `{cache.preset}`", "",
@@ -484,9 +512,9 @@ def main(argv=None):
         bl = [d for d in drop if d["mm3"] > 1e-3]
         md += ["", "Drop path (drop hole to dose drawer): " + ("clear." if not bl else
                "; ".join(f"blocked by {d['what']} {d['mm3']:.2f} mm³{'' if d['ok'] else ' **FAIL**'}" for d in bl))]
-    if row:
+    if row_hits:
         md += ["", "Row (two heads side by side):", ""] + [
-            f"- {d['what']}: {d['mm3']:.2f} mm³ {'OK' if d['ok'] else '**FAIL**'}" for d in row]
+            f"- {d['what']}: {d['mm3']:.2f} mm³ {'OK' if d['ok'] else '**FAIL**'}" for d in row_hits]
     if stubs:
         md += ["", f"Skipped (not implemented): {', '.join(stubs)}."]
     (cache.dir / "FITCHECK.md").write_text("\n".join(md) + "\n")

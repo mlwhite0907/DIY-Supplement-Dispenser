@@ -1,9 +1,50 @@
 {
  "title": "Dial close-up from above-front",
- "width": 1600, "height": 1200, "samples": 72,
+ "width": 1600,
+ "height": 1200,
+ "samples": 72,
  "heads": [
-  {"preset": "std", "name": "WHEY", "state": {"STATE_PULL": 0, "DIAL_ML": 20, "CHUCK_CLOSE": 1}, "jar": true, "powder": 0.62}
+  {
+   "preset": "std",
+   "name": "WHEY",
+   "state": {
+    "STATE_PULL": 0,
+    "DIAL_ML": 20,
+    "CHUCK_CLOSE": 1
+   },
+   "jar": true,
+   "powder": 0.62
+  }
  ],
- "camera": {"dir": [-0.22, -0.85, 1.15], "fov": 22, "fill": 0.36, "tags": ["dial", "dial_inlay"], "shift": [0, 0.04]},
- "look": {"key": {"dir": [-0.5, 0.85, 0.45], "soft": 0.18}, "ground": {"shadow": 0.45}}
+ "camera": {
+  "dir": [
+   -0.22,
+   -0.85,
+   1.15
+  ],
+  "fov": 22,
+  "fill": 0.36,
+  "tags": [
+   "dial",
+   "dial_inlay"
+  ],
+  "shift": [
+   0,
+   0.04
+  ],
+  "aperture": 2.5
+ },
+ "look": {
+  "key": {
+   "dir": [
+    -0.5,
+    0.85,
+    0.45
+   ],
+   "soft": 0.18
+  },
+  "ground": {
+   "shadow": 0.45
+  }
+ }
 }

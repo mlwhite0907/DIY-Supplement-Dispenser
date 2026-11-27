@@ -40,7 +40,20 @@ BED_MM = 250.0                              # P2S is 256^3; keep 3 mm per side s
 DENSITY = {"PLA": 1.24, "TPU": 1.21}        # g/cm3
 SHELL_MM = 1.2                              # perimeters + skins as an equivalent solid shell
 INFILL = 0.15                               # sparse infill fraction inside the shell
-STATE_VARS = ("STATE_PULL", "DIAL_ML", "CHUCK_CLOSE")
+BASE_STATE_VARS = ("STATE_PULL", "DIAL_ML", "CHUCK_CLOSE")
+OPTIONAL_STATE_VARS = ("DRAWER_OUT",)        # v5.1: dose drawer slid out (0/1), if params defines it
+
+
+def _detect_state_vars():
+    try:
+        t = strip_scad_comments(PARAMS.read_text())
+    except OSError:
+        return BASE_STATE_VARS
+    extra = tuple(v for v in OPTIONAL_STATE_VARS if re.search(r"^\s*" + v + r"\s*=", t, re.M))
+    return BASE_STATE_VARS + extra
+
+
+STATE_VARS = None   # set below, once the helpers exist
 TOOL_VERSION = "v5-tools-2"                 # bump to invalidate every cached export
 
 _print_lock = threading.Lock()
@@ -155,6 +168,9 @@ def strip_scad_comments(text: str) -> str:
             out.append(c)
             i += 1
     return "".join(out)
+
+
+STATE_VARS = _detect_state_vars()
 
 
 def split_statements(text: str):
@@ -373,11 +389,18 @@ class SourceIndex:
             t = strip_scad_comments(raw)
             t_nostr = re.sub(r'"(?:\\.|[^"\\])*"', '""', t)
             self.text[f] = t_nostr
-            mods = set(re.findall(r"\bmodule\s+([A-Za-z_]\w*)\s*\(", t_nostr))
+            # top-level definitions only (a let() or a local in a module body is not a global)
+            mods, names = set(), set()
+            for stmt in top_level_statements(t_nostr):
+                m = re.match(r"^(module|function)\s+([A-Za-z_]\w*)\s*\(", stmt)
+                if m:
+                    (mods if m.group(1) == "module" else names).add(m.group(2))
+                    continue
+                m = re.match(r"^([A-Za-z_]\w*)\s*=", stmt)
+                if m:
+                    names.add(m.group(1))
             self.modules |= mods
-            names = set(mods)
-            names |= set(re.findall(r"\bfunction\s+([A-Za-z_]\w*)\s*\(", t_nostr))
-            names |= set(re.findall(r"^([A-Za-z_]\w*)\s*=", t_nostr, re.M))
+            names |= mods
             for n in names:
                 self.defs.setdefault(n, f)
             self.uses[f] = set(_IDENT.findall(t_nostr))
@@ -601,7 +624,7 @@ def write_json_atomic(path, obj, indent=1):
 
 # --------------------------------------------------------------------------- posed export cache
 def state_key(state: dict) -> str:
-    return ",".join(f"{k.split('_')[-1].lower()}={float(state[k]):g}" for k in STATE_VARS)
+    return ",".join(f"{k.split('_')[-1].lower()}={float(state.get(k, 0)):g}" for k in STATE_VARS)
 
 
 class PosedCache:
@@ -613,7 +636,7 @@ class PosedCache:
     values of it.
     """
 
-    BASE = {"STATE_PULL": 0, "DIAL_ML": 0, "CHUCK_CLOSE": 0}
+    BASE = {"STATE_PULL": 0, "DIAL_ML": 0, "CHUCK_CLOSE": 0, "DRAWER_OUT": 0}
 
     def __init__(self, preset="std", name=None, jobs=3, timeout=900, root=None, force=False, quiet=False):
         self.preset = preset_label(preset)
@@ -739,7 +762,10 @@ translate([0, 0, Z_RIM + 0.3]) intersection() {{
 
 
 def fmt_state(st) -> str:
-    return f"pull {float(st['STATE_PULL']):g}, dial {float(st['DIAL_ML']):g} mL, chuck {float(st['CHUCK_CLOSE']):g}"
+    s = f"pull {float(st['STATE_PULL']):g}, dial {float(st['DIAL_ML']):g} mL, chuck {float(st['CHUCK_CLOSE']):g}"
+    if "DRAWER_OUT" in STATE_VARS and float(st.get("DRAWER_OUT", 0)):
+        s += ", drawer out"
+    return s
 
 
 def require(mod):

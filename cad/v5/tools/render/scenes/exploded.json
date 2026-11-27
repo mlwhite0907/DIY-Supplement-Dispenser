@@ -6,9 +6,10 @@
    "explode_scale": 1.45,
    "explode": {
      "foot": -110, "pedestal": -95, "dose_drawer": [0, -40, -95],
-     "stop_pin": -85, "base": -45, "pinion_cap": -38, "dial_spring": -30, "pinion": -22, "band": -10,
-     "slide": 0, "plunger": 0, "name_plate": 0, "name_inlay": 0, "lock_ring": 16,
-     "wiper": 28, "dial": 30, "dial_inlay": 30, "deck": 42, "stir_post": 72,
+     "stop_pin": -85, "base": -45, "stop_sleeve": -30, "pinion_cap": -38, "dial_spring": -30, "pinion": -22, "band": -10,
+     "slide": 0, "plunger": 0, "drawer_front": [0, -18, 0], "name_plate": [0, -18, 0], "name_inlay": [0, -18, 0],
+     "lock_ring": [0, -18, 16], "dial": [0, -18, 30], "dial_inlay": [0, -18, 30],
+     "wand_arm": 20, "wiper": 28, "deck": 42, "wand": 60, "stir_post": 72,
      "ring": 78, "guide_plate": 108, "gasket": 122, "jaw": 135, "jaw_pad": 135
    },
    "explode_jar": 175}

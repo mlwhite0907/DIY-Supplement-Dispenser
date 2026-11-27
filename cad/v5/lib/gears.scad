@@ -39,10 +39,9 @@ module rack_2d(m=1, n=20, pa=25, bl=BACKLASH, ck=0.25, add=0.85, back=3) {
     p  = PI*m;
     ha = m*add; hf = m*(add + ck);
     s  = p/2 - bl/2;
-    union() {
-        for (i=[0:n-1]) translate([i*p, 0])
-            polygon([[-s/2 - hf*tan(pa), -hf - EPS], [ s/2 + hf*tan(pa), -hf - EPS],
-                     [ s/2 - ha*tan(pa),  ha],       [-s/2 + ha*tan(pa),  ha]]);
-        translate([-p/2, -hf - back]) square([n*p, back]);
-    }
+    polygon(concat(
+        [[-p/2, -hf - back], [-p/2, -hf]],
+        [for (i = [0:n-1]) each [[i*p - s/2 - hf*tan(pa), -hf], [i*p - s/2 + ha*tan(pa), ha],
+                                 [i*p + s/2 - ha*tan(pa), ha], [i*p + s/2 + hf*tan(pa), -hf]]],
+        [[n*p - p/2, -hf], [n*p - p/2, -hf - back]]));
 }

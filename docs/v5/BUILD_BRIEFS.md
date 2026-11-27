@@ -107,7 +107,7 @@ WIPER (TPU 95A): a strip that fills the U-shaped wiper groove.
 Files: `parts/slide.scad`, `parts/plunger.scad`, `parts/dial.scad`, `parts/pinion.scad`, `parts/detent.scad`, `parts/band.scad`, `parts/name_plate.scad`
 
 ```text
-YOUR GROUP: DRAWER. You own slide, plunger (with its rack rod), dial (+ dial_inlay), pinion, detent, band and name_plate (+ name_inlay).
+GROUP DRAWER: split into two units. SLIDE owns slide, band, name_plate (+ name_inlay). DRIVE owns plunger (with rack rod), dial (+ dial_inlay), pinion, lock_ring, dial_spring and pinion_cap.
 Everything on the slide is placed with translate([0, SLIDE_Y0, 0]) from the slide-local frame. In that frame the chamber's fixed rear wall is at local y = 0, and the slide extends toward -y (front). Slide-local u = -local y.
 
 SLIDE (PLA, prints UPRIGHT: the bottom is on the bed; the top is ironed. The top slides under the ceiling and is the "live bottom" of the powder):
@@ -159,10 +159,17 @@ DIAL + DIAL_INLAY (PLA multi-color; prints TOP FACE DOWN on the textured plate, 
 
 PINION (PLA, prints flat): pinion_2d(m=G_M, z=G_Z, pa=G_PA, add=G_ADD, ck=G_CK), face width PIN_FW, hex bore DIAL_KEY_AF + 2*PINION_BORE_CL. It slides onto the dial key from below and is held by an M3 x 12 screw + washer. Posed: rotated DIAL_ANGLE.
 
-DETENT (TPU 95A): 40 crisp clicks (CLICK_DEG pitch; DETENT_TEETH notches per revolution on the dial).
-- Holding torque must be high enough that pulling the drawer can never turn the dial (target >= 0.05 N*m), with turning torque <= 0.15 N*m.
-- No sustained stress on PLA flexures (PLA creeps): any spring element is TPU.
-- Suggested: a TPU ring in the drawer-top recess with 2-3 rounded nubs pressing up into radial V-notches on the dial's underside, preloaded axially by the dial/pinion stack (the screw sets the stack height). Choose geometry so the preload comes from fixed dimensions, not screw torque.
+LOCKING DIAL (replaces the click detent: the user wants "set it and forget it"):
+- LOCK RING (PLA, prints flat with the teeth up): sits keyed in the slide's dial well (DIAL_WELL_D x DIAL_WELL_DEPTH, keys DIAL_WELL_KEYS / DIAL_WELL_KEY).
+  - Top face carries DETENT_TEETH radial V-teeth, LOCK_TOOTH_H tall, 90 deg included angle.
+- DIAL underside: matching V-teeth, so the dial sits LOCKED in one of 40 positions (the 0..40 click positions, CLICK_DEG apart) and cannot turn when you pull the handle or bump it.
+- TO CHANGE THE DOSE: lift the dial LOCK_LIFT (2.4 mm), turn, release. The teeth are V-shaped, so it self-centres into the nearest position with a solid "clack".
+- PINION: axially captured in the drawer front's pinion cavity (max 0.4 mm play). The dial's hex key SLIDES through the pinion's hex bore when the dial lifts, so the pinion only ever turns and never lifts.
+- PINION CAP (PLA, prints flat): closes the pinion cavity from below with 2 x M3. It is the floor the dial spring pushes against.
+- DIAL SPRING (TPU 95A): a compression bushing or wave ring on the dial shaft's lower end, between the pinion cap and a washer held by an M3 screw in the shaft end.
+  - It pulls the dial down into the lock with about 6-10 N, and lifting the dial compresses it by LOCK_LIFT.
+  - Size it so the dial can't over-lift: hard stop at LOCK_LIFT + 0.4.
+- The dial's hard-stop tab still hits STOP_POST at 0 mL and at max, so the gears and plunger are never the stop. The stop works whether the dial is lifted or not.
 
 BAND (TPU 95A): two return bands.
 - Default routing: slide hook -> around the rear post (diameter BAND_POST_D) -> front anchor post (diameter 6). Path length at rest BAND_PATH_REST, plus STROKE more at full pull.
@@ -222,43 +229,47 @@ Verify:
 - Everything works for the std, pro and template presets.
 ```
 
-## BAR
+## PEDESTAL
 
-Files: `parts/bay.scad`, `parts/leg.scad`, `parts/foot.scad`
+Files: `parts/pedestal.scad` (pedestal, joiner, row_assembly), `parts/dose_drawer.scad`, `parts/foot.scad`
 
 ```text
-YOUR GROUP: BAR. You own bay (bay_plate + bar_assembly), leg and foot: the modular, expandable bench the heads dock on. Adding a jar later = print one bay plate + one leg and bolt it on.
+YOUR GROUP: PEDESTAL. It replaces the old tall bar. The user keeps the heads inside a cabinet or lined up on a table, so nothing goes under a head.
+Each head sits on its own low PEDESTAL that holds a DOSE DRAWER:
+- Pull the dose handle (the slide's drawer front) and let go: one dose drops through the head's drop hole into the dose drawer.
+- Slide the dose drawer out, pour it into a cup, slide it back.
+- Pedestals line up side by side, ROW_PITCH apart.
 
-BAR COORDINATES: x runs along the bar (bays side by side), y is depth (front = -y, toward the user), z = 0 at the counter.
-- Bay i is centred at x = i*BAY_W.
-- Its bay plate top is at z = BAR_H.
-- The head sits with its origin at (i*BAY_W, BAY_Y_HEAD, BAR_H). Choose BAY_Y_HEAD so the drawer front overhangs the plate's front edge naturally and the plate supports the puck well.
+PEDESTAL (PLA):
+- Round, diameter PUCK_D (flush with the head above), from z = -PED_H to 0 in head coordinates.
+- The top plate z in [-PED_TOP_T, 0] is the head's seat.
+  - Two DOCK pins (diameter DOCK_PIN_D, 2.5 tall, chamfered) at DOCK_PINS. They mate with the holes in the head's bottom.
+  - Opening PED_HOLE centred at (0, PED_HOLE_Y) under the drop hole, with a 0.8 mm drip edge.
+- A DRAWER BAY: a tunnel open to the FRONT (-y) for the dose drawer.
+  - Smooth runners, 0.4 mm clearance per side, a gentle TPU-free stop (the drawer front block hits the pedestal face).
+  - A soft PLA snap bump so the drawer stays put but slides out with a light pull.
+- Feet recesses for 4 TPU feet (FEET_T).
+- JOINER pockets on both sides (x = +/-PUCK_R) at y = JOINER_Y, so an optional joiner keeps a row of pedestals aligned with PED_GAP between them.
+- Print orientation: choose one that needs NO supports. For example print it upside down with the top plate on the bed (the flattest, most important face), with the bay walls rising and the runners shaped as 45-degree ledges.
+  - If a closed floor is needed, make it a separate flat part and add it to your files and report.
+- The visible skin continues the head's design language: same diameter, same reveal V-groove at the joint with the head, C_BED / C_TOP chamfers.
 
-BAY PLATE (PLA, prints UPRIGHT; the top is the visible face, so keep it clean):
-- About BAY_W minus the leg thickness wide, BAY_D deep, BAY_T thick, with a stiffening rim and ribs underneath. It must not sag under about 2 kg (a full glass jar plus head) over its span; check bridges.
-- DOCK PINS: diameter DOCK_PIN_D, 2.5 tall, chamfered, at DOCK_PINS relative to the head origin. The head drops on and can't slide when the drawer is pulled.
-- CUP OPENING: a U-shaped cut-out open to the front edge, under the head's drop hole (head-y range hy(HOLE_U1)..hy(HOLE_U0), x +/-CH_W/2).
-  - About 105 mm wide (shaker bottles are about 90 mm) and deep enough to centre a cup under the hole.
-  - Elegantly radiused. The puck must still rest on plenty of plate (sides and rear).
-- Side edges join the legs: a tongue into the leg's slot plus 2 x M4 screws per side (pilots in the plate, clearance + hidden counterbore on the leg's outer face, or hidden under an end cap on the end legs).
+DOSE DRAWER (PLA, prints upright, open top; the inner floor is a top surface, so iron it):
+- Outer width CUP_W (it lines up under the dose handle), wall CUP_WALL, floor CUP_FLOOR_T.
+- Rim at CUP_TOP_Z, bottom at CUP_BOT_Z. Length from CUP_Y_REAR (rear, behind the drop hole) to CUP_Y_FRONT (front face aligned with the handle's front).
+- The FRONT BLOCK outside the pedestal rises to CUP_FRONT_TOP_Z (1.8 mm reveal under the handle). It has a comfortable finger pull: a recessed scoop or undercut on its lower front.
+- Interior: big smooth radii (>= R10 vertical corners, R5 floor fillets), so powder pours out completely with no corners to trap it.
+- A POUR SPOUT at the front: a shaped lip, about 30-40 mm wide, that aims into a shaker mouth (about 50-60 mm).
+  - Tilting the drawer forward must empty it completely.
+- It must slide out smoothly and fast and look like a premium kitchen object.
 
-LEG (PLA, prints FLAT, the panel lying on the bed):
-- A vertical panel in the y-z plane, LEG_T about 10 mm thick, BAR_H tall, BAY_D deep. It joins the bay plates on both sides: N bays use N+1 identical legs.
-- Elegant: a large softly radiused arch or cut-out so it looks light and modern. It must keep enough material for stiffness and tip resistance.
-- Two TPU feet recesses on the bottom.
-- The top edge carries the plate slots.
-- Fits a 256 mm bed (BAR_H is about 232, so print it flat).
+FOOT (TPU): 4 grippy pads per pedestal.
 
-FOOT (TPU): grippy pads (about 25 x 15 x 3 mm) pressing into the leg recesses.
+row_assembly(n): n heads (call head_assembly(), which already includes pedestal, drawer and feet via the PARTS list) at x = i*ROW_PITCH, plus joiners between them.
 
-TIP-OVER: a person pulls a drawer toward themselves with about 10 N at drawer height, about BAR_H + 15 mm, with a full jar on top (head about 0.45 kg plus jar and powder about 1.5 kg).
-- Compute the tipping margin for ONE bay and for a joined bar of 3 and 10 bays, and design the footprint/feet so even a single bay doesn't tip.
-- Add an optional rear wall-tab with a screw hole (a printed accessory, local module bar_wall_tab()).
-- Put the numbers in a comment block at the top of bay.scad.
-
-bar_assembly(n): n bay plates + n+1 legs + feet, with a head on each bay by calling head_assembly() (defined in the entry file, available because everything is included).
-- The default pose shows 3 heads (std).
-- Verify interference between the plates/legs and a docked head (posed base) and the cup space: a 90 mm diameter x SHAKER_H cylinder under the drop hole must be clear.
+TIP-OVER: one head on its pedestal with a full jar (about 2 kg total), with someone pulling the dose handle at about 10 N at handle height (about PED_H + 15 mm above the table).
+- Compute the tipping margin and make sure a single pedestal is stable (footprint, feet).
+- Put the numbers in a comment at the top of pedestal.scad.
 ```
 
 ## TOOLS

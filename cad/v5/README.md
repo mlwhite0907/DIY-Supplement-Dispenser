@@ -24,7 +24,7 @@ cad/v5/
   - `hy(u)` converts body u to head y.
 - **Slide-local frame:** same axes as the head, with the origin at the chamber's fixed **rear wall**.
   - The slide extends toward −y (front) for the chamber, plunger slot, neck and drawer front, and toward +y for the solid rear section.
-  - Place the slide (and everything riding on it: plunger, dial, detent, stir post, name plate) with `translate([0, SLIDE_Y0, 0])`. `SLIDE_Y0` already includes the pull state.
+  - Place the slide (and everything riding on it: plunger, dial, pinion, lock ring, dial spring, pinion cap, stir post, name plate) with `translate([0, SLIDE_Y0, 0])`. `SLIDE_Y0` already includes the pull state.
   - Slide-local u = −(local y).
 - **Vertical stack:**
   - `Z_FLOOR` is the slide running surface; the floor occupies z ∈ [0, `FLOOR_T`].
@@ -54,9 +54,10 @@ cad/v5/
 | Group | Files |
 |---|---|
 | BODY | `parts/base.scad`, `parts/deck.scad`, `parts/stir_post.scad`, `parts/stop_pin.scad`, `parts/wiper.scad` |
-| DRAWER | `parts/slide.scad`, `parts/plunger.scad`, `parts/dial.scad`, `parts/pinion.scad`, `parts/detent.scad`, `parts/band.scad`, `parts/name_plate.scad` |
+| SLIDE | `parts/slide.scad`, `parts/band.scad`, `parts/name_plate.scad` |
+| DRIVE | `parts/plunger.scad`, `parts/dial.scad`, `parts/pinion.scad`, `parts/lock_ring.scad`, `parts/dial_spring.scad`, `parts/pinion_cap.scad` |
 | CHUCK | `parts/ring.scad`, `parts/guide_plate.scad`, `parts/jaw.scad`, `parts/jaw_pad.scad`, `parts/gasket.scad` |
-| BAR | `parts/bay.scad`, `parts/leg.scad`, `parts/foot.scad` |
+| PEDESTAL | `parts/pedestal.scad` (pedestal, joiner, row_assembly), `parts/dose_drawer.scad`, `parts/foot.scad` |
 | TOOLS | `tools/*` (not part geometry) |
 
 - Never edit `params.scad`, `lib/`, `dosebar.scad`, `presets/`, or another group's files.
@@ -68,7 +69,7 @@ cad/v5/
 
 - Keep the exact module signatures in the stubs.
 - Every part file starts with `include <../params.scad>` and contains **no top-level geometry**.
-- `<part>()` = the part in **head coordinates** in its assembled pose, honoring the state variables. Jaws and pads take an index `i` (0..2) and are placed at `JAW_ANGLES[i]`. The bay is a different case: `bay_plate()` is placed in bar coordinates (see §5).
+- `<part>()` = the part in **head coordinates** in its assembled pose, honoring the state variables. Jaws and pads take an index `i` (0..2) and are placed at `JAW_ANGLES[i]`.
 - `<part>_print()` = the part oriented for printing: sitting on z = 0, centred near the origin, best orientation per §4. It must fit 250 × 250 × 250 mm.
 - **Multi-color:** a part with inlaid text exports the ink as a separate body.
   - The dial numerals go in `dial_inlay()` / `dial_inlay_print()`. The name text goes in `name_inlay(txt)` / `name_inlay_print(txt)`.
@@ -147,13 +148,22 @@ cad/v5/
 - Pinion (separate part `pinion`): m `G_M`, z `G_Z`, PA `G_PA`, addendum `G_ADD`, on the dial axis at slide-local u = `U_DIAL`, face width `PIN_FW`.
   - It slides onto the dial shaft's hex key (`DIAL_KEY_AF` across flats, `PINION_BORE_CL`) from below and is clamped by an M3 screw into the shaft end.
 - Rod front end at slide-local u = `U_ROD_FRONT0` + `CH_L`.
-- Dial seat (cut by the slide): a well `DIAL_WELL_D` × `DIAL_WELL_DEPTH` with 2 key notches `DIAL_WELL_KEY` at `DIAL_WELL_KEYS`, and a stop post `STOP_POST` at `STOP_TAB_ANGLE`. Pinion cavity radius `PINION_CAVITY_R`. The detent part must fit inside the well and use its keys.
-- Detent: `DETENT_TEETH` notches, 40 used. Hard stop tab at `STOP_TAB_ANGLE`, so the gears and the plunger are never the stop.
+- Dial seat (cut by the slide): a well `DIAL_WELL_D` × `DIAL_WELL_DEPTH` with 2 key notches `DIAL_WELL_KEY` at `DIAL_WELL_KEYS`, and a stop post `STOP_POST` at `STOP_TAB_ANGLE`. Pinion cavity radius `PINION_CAVITY_R`, open at the drawer-front bottom and closed by the `pinion_cap`.
+- **Locking dial (set it and forget it):**
+  - The PLA `lock_ring` sits keyed in the well with `DETENT_TEETH` V-teeth (`LOCK_TOOTH_H`, 90°) on its top. They mesh with matching teeth under the dial.
+  - Lift the dial `LOCK_LIFT` to turn it. The TPU `dial_spring` (under the pinion cap, on the dial shaft's end washer/M3 screw) pulls it back down into the nearest of the 40 positions.
+  - The pinion is axially captured; the dial's hex key slides through it.
+- Lock teeth: `DETENT_TEETH` per revolution, 40 positions used. Hard stop tab at `STOP_TAB_ANGLE`, so the gears and the plunger are never the stop.
 - Drawer front: starts at slide-local u = `U_HANDLE0`, length `HANDLE_L`, width `HANDLE_W`, z ∈ [`HANDLE_Z0`, `Z_HANDLE_TOP`].
 
-**Bay ↔ base**
+**Pedestal ↔ base ↔ dose drawer**
 - The head bottom has 2 locating holes Ø `DOCK_PIN_D` + `CL_PIN`, 3 deep, at `DOCK_PINS`.
-- The bay plate (top at z = 0 in head coordinates, `BAY_T` thick) has matching pins and an opening under the drop hole that is open to the front for the cup.
+- The pedestal top plate (z ∈ [−`PED_TOP_T`, 0], round Ø `PUCK_D`) carries matching pins and an opening `PED_HOLE` centred at y = `PED_HOLE_Y`, right under the drop hole.
+- The dose drawer slides in the pedestal:
+  - Outer width `CUP_W`. Rim at `CUP_TOP_Z`, bottom at `CUP_BOT_Z`.
+  - It runs from `CUP_Y_REAR` to `CUP_Y_FRONT`.
+  - Its front block rises to `CUP_FRONT_TOP_Z`, lining up under the dose handle.
+- Pedestal height `PED_H`; TPU feet `FEET_T`. Neighbouring pedestals sit `ROW_PITCH` apart with an optional joiner at y = `JOINER_Y`.
 
 ## 6. Design language (uniform everywhere)
 

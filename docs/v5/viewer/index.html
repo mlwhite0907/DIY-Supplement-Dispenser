@@ -105,7 +105,7 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); ove
 <aside class="panel" id="panel" aria-label="Model controls">
   <div class="brand">
     <h1>Dose Bar v5</h1>
-    <p>Your glass jar flips onto the head. Set the dial, pull the drawer, and one level dose drops into your cup.</p>
+    <p>Your glass jar flips onto the head. Set the dial once. Pull the handle and let go: one level dose drops into the drawer below. Slide it out and pour.</p>
     <button class="btn toggle-panel" id="togglePanel" type="button" aria-expanded="true">Hide controls</button>
   </div>
 
@@ -114,13 +114,13 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); ove
     <div class="seg" role="group" aria-label="Model">
       <button type="button" data-model="std" aria-pressed="true">4.5″ jar</button>
       <button type="button" data-model="pro" aria-pressed="false">Protein</button>
-      <button type="button" data-model="bar" aria-pressed="false">Bar ×3</button>
+      <button type="button" data-model="row" aria-pressed="false">Row ×3</button>
     </div>
   </div>
 
   <div class="group">
     <div class="ctl">
-      <label class="name" for="dial">Dose dial</label><span class="val" id="dialVal">25 mL</span>
+      <label class="name" for="dial">Dose dial · lift, turn, it locks</label><span class="val" id="dialVal">25 mL</span>
       <input id="dial" type="range" min="0" max="40" step="1" value="25">
       <span class="hint" id="dialHint">40 clicks · 1 mL each · 0 = off</span>
       <div class="gram-row">
@@ -145,6 +145,12 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-ui); ove
     </div>
     <div class="row">
       <button class="btn primary" id="pullBtn" type="button">Pull a dose</button>
+      <button class="btn" id="pourBtn" type="button">Slide out &amp; pour</button>
+    </div>
+    <div class="ctl">
+      <label class="name" for="drawer">Dose drawer</label><span class="val" id="drawerVal">in</span>
+      <input id="drawer" type="range" min="0" max="100" step="1" value="0">
+      <span class="hint" id="heapHint">Each pull drops one dose into the drawer below. Slide it out and pour into your cup.</span>
     </div>
     <div class="ctl">
       <label class="name" for="chuck">Twist lock</label><span class="val" id="chuckVal">locked</span>
@@ -247,7 +253,8 @@ makeMats();
 const loader = new GLTFLoader();
 const cache = {};
 let model = null;        // { root, meta, parts: {name: [mesh...]}, groups }
-const state = { dial: 25, pull: 0, chuck: 1, jar: true, cut: false, explode: 0, explodeTarget: 0, spin: false };
+const state = { dial: 25, pull: 0, chuck: 1, jar: true, cut: false, explode: 0, explodeTarget: 0, spin: false, drawer: 0, heap: 0 };
+let heap = null;   // powder pile inside the dose drawer
 
 async function loadModel(key) {
   if (cache[key]) return cache[key];
@@ -272,8 +279,15 @@ async function loadModel(key) {
 
 function setModel(entry) {
   if (model) world.remove(model.root);
+  if (heap) { heap.parent && heap.parent.remove(heap); heap = null; }
   model = entry;
   world.add(entry.root);
+  if (entry.meta.cup && entry.meta.key !== 'row') {
+    heap = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 24), mats.powder);
+    heap.castShadow = true; heap.receiveShadow = true;
+    heap.userData.info = { label: 'Your dose, waiting in the drawer', material: '', role: 'powder' };
+    entry.root.add(heap);
+  }
   const m = entry.meta;
   $('#dial').max = m.v_max; $('#dial').step = m.ml_per_click;
   state.dial = Math.min(state.dial, m.v_max);
@@ -287,7 +301,8 @@ function setModel(entry) {
     ['Drawer stroke', `${m.stroke.toFixed(1)} mm`],
     ['Jar neck', `${m.neck_od} mm ±10`],
   ];
-  if (m.key === 'bar') specs.splice(0, 5, ['Bays shown', '3'], ['Bay width', `${m.bay_w.toFixed(0)} mm`], ['Bar height', `${m.bar_h.toFixed(0)} mm`], ['Add a jar', '1 plate + 1 leg']);
+  if (m.key === 'row') specs.splice(0, 5, ['Heads shown', '3'], ['Spacing', `${m.row_pitch.toFixed(0)} mm`], ['Pedestal height', `${m.ped_h.toFixed(0)} mm`], ['Add a jar', 'print one more head']);
+  else specs.push(['Total height', `${(m.ped_h + m.rim_z + m.jar_h - 8).toFixed(0)} mm`]);
   $('#specs').innerHTML = specs.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
   frameCamera('hero', true);
   apply();
@@ -335,12 +350,24 @@ function apply() {
         o.position.x += Math.cos(a) * d; o.position.y += Math.sin(a) * d;
       }
       if (g === 'jar') o.visible = state.jar;
+      if (g === 'drawer') o.position.y -= (state.drawer / 100) * ((model.meta.cup || {}).travel || 0);
+      if (g === 'band') o.visible = state.pull < 2;
       // exploded view: lift parts by their layer index
       if (ex > 0.001) o.position.z += ex * (info.explode || 0);
       o.material.clippingPlanes = state.cut && info.role !== 'glass' ? [clipPlane] : [];
       if (info.role === 'glass' || info.role === 'powder') o.material.clippingPlanes = state.cut ? [clipPlane] : [];
     }
   }
+  if (heap) {
+    const cup = m.cup || {};
+    heap.visible = state.heap > 0.5;
+    const V = Math.max(1, state.heap) * 1000, ry = Math.cbrt(V / 1.131);
+    const maxX = (cup.w || 60) / 2 - 4, maxY = Math.abs((cup.y_front || -120) - (cup.y_rear || -10)) / 2 - 6;
+    heap.scale.set(Math.min(1.2 * ry, maxX), Math.min(ry, maxY), Math.min(0.45 * ry, (cup.in_h || 36) - 4));
+    heap.position.set(0, (m.drop_y || -37) - (state.drawer / 100) * (cup.travel || 0), (cup.bot_z || -40) + (cup.floor_t || 2));
+    heap.position.z += ex * -95;
+  }
+  $('#drawerVal').textContent = state.drawer < 1 ? 'in' : (state.drawer > 99 ? 'out' : `${Math.round(state.drawer)}%`);
   $('#dialVal').textContent = `${(+state.dial).toFixed(m.ml_per_click < 1 ? 1 : 0)} mL`;
   const g = state.dial * parseFloat($('#powder').value);
   $('#gramVal').textContent = state.dial === 0 ? 'off' : `${g < 10 ? g.toFixed(1) : Math.round(g)} g`;
@@ -359,7 +386,7 @@ function frameCamera(view, instant) {
   const dirs = { hero: [-0.85, 0.55, 1.15], front: [0, 0.22, 1.6], top: [0.001, 1.8, 0.35], side: [1.6, 0.3, 0.001] };
   const aspect = stage.clientWidth / Math.max(1, stage.clientHeight);
   const fit = aspect < 1 ? Math.pow(1 / aspect, 0.85) * 0.92 : 1;        // portrait phones need more distance
-  const d = new THREE.Vector3(...(dirs[view] || dirs.hero)).normalize().multiplyScalar(R * (m.key === 'bar' ? 1.9 : 2.55) * fit);
+  const d = new THREE.Vector3(...(dirs[view] || dirs.hero)).normalize().multiplyScalar(R * (m.key === 'row' ? 1.9 : 2.55) * fit);
   const target = center.clone(); target.y = box.min.y + size.y * 0.45;
   const toPos = target.clone().add(d);
   if (instant) { camera.position.copy(toPos); controls.target.copy(target); }
@@ -408,10 +435,25 @@ $('#pullBtn').addEventListener('click', () => {
     const u = Math.min(1, (t - t0) / dur);
     // out (0..0.45), hold (0.45..0.6), spring back (0.6..1)
     const p = u < 0.45 ? easeInOut(u / 0.45) : (u < 0.6 ? 1 : 1 - easeOut((u - 0.6) / 0.4));
-    state.pull = p * 100; $('#pull').value = state.pull; apply();
+    state.pull = p * 100; $('#pull').value = state.pull;
+    if (!pullAnim.dosed && u > 0.42) { pullAnim.dosed = true; state.heapTarget = Math.min((state.heapTarget || 0) + (+state.dial), (model.meta.v_max || 40) * 3); }
+    apply();
     if (u >= 1) pullAnim = null;
   };
 });
+let pourAnim = null;
+$('#pourBtn').addEventListener('click', () => {
+  if (pourAnim) return;
+  const t0 = performance.now();
+  pourAnim = (t) => {
+    const u = Math.min(1, (t - t0) / 2600);
+    state.drawer = 100 * (u < 0.35 ? easeInOut(u / 0.35) : (u < 0.65 ? 1 : 1 - easeInOut((u - 0.65) / 0.35)));
+    if (u > 0.45 && u < 0.6) { state.heapTarget = 0; }
+    $('#drawer').value = state.drawer; apply();
+    if (u >= 1) pourAnim = null;
+  };
+});
+$('#drawer').addEventListener('input', (e) => { state.drawer = +e.target.value; apply(); });
 const easeInOut = (x) => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
 const easeOut = (x) => 1 - Math.pow(1 - x, 3);
 
@@ -445,7 +487,10 @@ window.addEventListener('resize', resize);
 
 renderer.setAnimationLoop((t) => {
   if (pullAnim) pullAnim(t);
+  if (pourAnim) pourAnim(t);
   if (camTween) camTween(t);
+  const ht = state.heapTarget || 0;
+  if (Math.abs(ht - state.heap) > 0.05) { state.heap += (ht - state.heap) * 0.12; apply(); }
   const d = state.explodeTarget - state.explode;
   if (Math.abs(d) > 0.001) { state.explode += d * 0.12; apply(); }
   controls.update();

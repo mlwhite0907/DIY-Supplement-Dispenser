@@ -214,11 +214,37 @@ Z_HANDLE_TOP = Z_SLIDE_TOP;       // drawer front top is flush with the slide to
 HANDLE_Z0 = 0.8;                  // drawer front bottom clears the bay plate (z=0)
 NAME_PLATE = [HANDLE_W - 10, 12, 1.6];   // [w, h, t] recess on the drawer front face
 
-// ---------- bar (modular bench) ----------------------------------------------------
-SHAKER_H = 220;                   // your shaker bottle WITHOUT lid (or tallest cup), mm
-BAR_H    = SHAKER_H + 12;         // top of bay plate above the counter
-BAY_W    = max(PUCK_D, BODY_OD) + 12;
-BAY_D    = PUCK_D + 24;
-BAY_T    = 6;
+// ---------- dial lock: set it and forget it ---------------------------------------
+// The dial LOCKS. DETENT_TEETH V-teeth under the dial mesh with a PLA lock ring
+// keyed into the dial well. Lift the dial LOCK_LIFT to turn it; a TPU spring
+// under the drawer front pulls it back down into the nearest of 40 positions.
+// The pinion stays axially captured in its cavity; the dial's hex key slides
+// through the pinion's hex bore when the dial is lifted.
+LOCK_LIFT    = 2.4;               // lift needed to clear the lock teeth
+LOCK_TOOTH_H = 1.2;               // V-tooth height (90 deg included angle)
+LOCK_RING_T  = 2.2;               // PLA lock ring thickness (sits in the dial well)
+
+// ---------- pedestal + dose drawer (each head sits on its own pedestal) ------------
+// Pull the dose handle and let go: one dose drops into the DOSE DRAWER inside the
+// pedestal. Slide the drawer out and pour it into your cup. Pedestals line up side
+// by side on a table, counter or cabinet shelf; nothing needs to fit under a head.
+PED_TOP_T   = 3.0;                // pedestal top plate: the head sits on it, z in [-PED_TOP_T, 0]
+CUP_WALL    = 2.0;
+CUP_FLOOR_T = 2.0;
+CUP_IN_H    = 36;                 // dose drawer interior depth
+CUP_TOP_Z   = -PED_TOP_T - 1.0;   // drawer rim inside the pedestal (1 mm below the top plate)
+CUP_BOT_Z   = CUP_TOP_Z - CUP_IN_H - CUP_FLOOR_T;
+PED_FLOOR_T = 3.0;
+PED_H       = -CUP_BOT_Z + 0.6 + PED_FLOOR_T;   // pedestal height; its bottom is at z = -PED_H
+CUP_W       = HANDLE_W;           // drawer outer width: lines up under the dose handle
+CUP_Y_REAR  = hy(HOLE_U0) + 8;    // drawer rear end (head y): 8 mm past the drop hole
+CUP_Y_FRONT = -(PUCK_R + REVEAL_H + HANDLE_L);  // drawer front face lines up with the handle's front
+CUP_FRONT_TOP_Z = -1.0;           // drawer front block rises to just under the handle (reveal 1.8 mm)
+PED_HOLE    = [CH_W + 3, (HOLE_U1 - HOLE_U0) + 3];   // top-plate opening over the drawer (x, y), centred on the drop hole
+PED_HOLE_Y  = (hy(HOLE_U0) + hy(HOLE_U1))/2;
+FEET_T      = 2.5;
+PED_GAP     = 6;                  // gap between neighbouring pedestals in a row
+JOINER_Y    = 24;                 // joiner pockets on each side at head y = JOINER_Y
+ROW_PITCH   = PUCK_D + PED_GAP;   // centre-to-centre spacing when lined up
 
 // (the dimension report echo lives in dosebar.scad so it prints once)

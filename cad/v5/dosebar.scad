@@ -3,7 +3,7 @@
 //   PART="assembly"        whole head (+ jar ghost) in the current state
 //   PART="<name>"          one part, in PRINT orientation (for STL export)
 //   PART="posed:<name>"    one part, in ASSEMBLED pose (for fit checks)
-//   PART="bar"             N bays + legs (BAR_BAYS)
+//   PART="row"             ROW_N heads on pedestals, lined up
 // State: -D STATE_PULL=0..1  -D DIAL_ML=<mL>  -D CHUCK_CLOSE=0..1
 // Jar:   tools/build.py passes the preset values with -D.
 // ============================================================================
@@ -14,7 +14,9 @@ include <parts/slide.scad>
 include <parts/plunger.scad>
 include <parts/dial.scad>
 include <parts/pinion.scad>
-include <parts/detent.scad>
+include <parts/lock_ring.scad>
+include <parts/dial_spring.scad>
+include <parts/pinion_cap.scad>
 include <parts/stir_post.scad>
 include <parts/stop_pin.scad>
 include <parts/wiper.scad>
@@ -25,8 +27,8 @@ include <parts/guide_plate.scad>
 include <parts/jaw.scad>
 include <parts/jaw_pad.scad>
 include <parts/gasket.scad>
-include <parts/bay.scad>
-include <parts/leg.scad>
+include <parts/pedestal.scad>
+include <parts/dose_drawer.scad>
 include <parts/foot.scad>
 include <parts/coupon.scad>
 
@@ -38,7 +40,7 @@ echo(str("[dosebar] ", JAR_NAME, " class ", CLASS_NAME, " 0-", V_MAX, " mL @ ", 
     " | rear chamfer ", SLIDE_REAR_CHAMFER, " | band: direct +", round(100*BAND_STRAIN_ADD), "%, pulley path ", round(BAND_PATH_REST), " mm +", round(100*BAND_STRAIN_ADD_TPU), "%"));
 
 PART = "assembly";
-BAR_BAYS = 3;
+ROW_N = 3;              // heads shown by PART="row"
 NAME = "WHEY";
 SHOW_JAR = true;
 
@@ -51,7 +53,9 @@ PARTS = [
     ["dial",        "PLA", 1, "accent"],
     ["dial_inlay",  "PLA", 1, "ink"],
     ["pinion",      "PLA", 1, "accent"],
-    ["detent",      "TPU", 1, "tpu"],
+    ["lock_ring",   "PLA", 1, "accent"],
+    ["dial_spring", "TPU", 1, "tpu"],
+    ["pinion_cap",  "PLA", 1, "body"],
     ["stir_post",   "PLA", 1, "accent"],
     ["stop_pin",    "PLA", 1, "accent"],
     ["wiper",       "TPU", 1, "tpu"],
@@ -63,9 +67,10 @@ PARTS = [
     ["jaw",         "PLA", 3, "accent"],
     ["jaw_pad",     "TPU", 3, "tpu"],
     ["gasket",      "TPU", 1, "tpu"],
-    ["bay_plate",   "PLA", 1, "body"],
-    ["leg",         "PLA", 1, "body"],
-    ["foot",        "TPU", 2, "tpu"],
+    ["pedestal",    "PLA", 1, "body"],
+    ["dose_drawer", "PLA", 1, "body"],
+    ["joiner",      "PLA", 1, "body"],
+    ["foot",        "TPU", 4, "tpu"],
 ];
 COLORS = [["body", "#ECE8DF"], ["accent", "#2F3237"], ["ink", "#ECE8DF"], ["tpu", "#3A3D42"]];
 function _col(k) = COLORS[search([k], COLORS)[0]][1];
@@ -79,7 +84,12 @@ module posed(name) {
     else if (name == "dial")        dial();
     else if (name == "dial_inlay")  dial_inlay();
     else if (name == "pinion")      pinion();
-    else if (name == "detent")      detent();
+    else if (name == "lock_ring")   lock_ring();
+    else if (name == "dial_spring") dial_spring();
+    else if (name == "pinion_cap")  pinion_cap();
+    else if (name == "pedestal")    pedestal();
+    else if (name == "dose_drawer") dose_drawer();
+    else if (name == "foot")        foot();
     else if (name == "stir_post")   stir_post();
     else if (name == "stop_pin")    stop_pin();
     else if (name == "wiper")       wiper();
@@ -108,7 +118,9 @@ module printed(name) {
     else if (name == "dial")        dial_print();
     else if (name == "dial_inlay")  dial_inlay_print();
     else if (name == "pinion")      pinion_print();
-    else if (name == "detent")      detent_print();
+    else if (name == "lock_ring")   lock_ring_print();
+    else if (name == "dial_spring") dial_spring_print();
+    else if (name == "pinion_cap")  pinion_cap_print();
     else if (name == "stir_post")   stir_post_print();
     else if (name == "stop_pin")    stop_pin_print();
     else if (name == "wiper")       wiper_print();
@@ -120,8 +132,9 @@ module printed(name) {
     else if (name == "jaw")         jaw_print();
     else if (name == "jaw_pad")     jaw_pad_print();
     else if (name == "gasket")      gasket_print();
-    else if (name == "bay_plate")   bay_plate_print();
-    else if (name == "leg")         leg_print();
+    else if (name == "pedestal")    pedestal_print();
+    else if (name == "dose_drawer") dose_drawer_print();
+    else if (name == "joiner")      joiner_print();
     else if (name == "foot")        foot_print();
     else if (name == "coupon")      coupon_print();
     else if (name == "coupon_parts") coupon_parts_print();
@@ -136,12 +149,12 @@ module jar_ghost() {
         [NECK_OD/2 - 3, NECK_H + 2], [MOUTH_ID/2, NECK_H]]);
 }
 module head_assembly() {
-    for (p = PARTS) if (p[0] != "bay_plate" && p[0] != "leg" && p[0] != "foot")
+    for (p = PARTS) if (p[0] != "joiner")
         color(_pcol(p[0])) posed(p[0]);
     if (SHOW_JAR) %jar_ghost();
 }
 if (PART == "assembly") head_assembly();
-else if (PART == "bar") bar_assembly(BAR_BAYS);
+else if (PART == "row") row_assembly(ROW_N);
 else if (len(PART) > 6 && PART[0]=="p" && PART[1]=="o" && PART[2]=="s" && PART[3]=="e" && PART[4]=="d" && PART[5]==":")
     posed([for (i=[6:len(PART)-1]) PART[i]][0] == undef ? "" : str_join([for (i=[6:len(PART)-1]) PART[i]]));
 else printed(PART);

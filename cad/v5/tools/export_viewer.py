@@ -30,7 +30,12 @@ PARTS = {
     "wiper":       ("tpu",    "static",  "Wiper seal", "TPU 95A", 28),
     "slide":       ("body",   "slide",   "Drawer (dose chamber inside)", "PLA", 0),
     "plunger":     ("accent", "plunger", "Plunger + rack (sets the dose)", "PLA", 0),
-    "detent":      ("tpu",    "slide",   "Click detent", "TPU 95A", 14),
+    "lock_ring":   ("accent", "slide",   "Dial lock ring (lift the dial to turn it)", "PLA", 16),
+    "dial_spring": ("tpu",    "slide",   "Dial spring (pulls the dial into its lock)", "TPU 95A", -30),
+    "pinion_cap":  ("body",   "slide",   "Pinion cap", "PLA", -38),
+    "pedestal":    ("body",   "static",  "Pedestal (holds the dose drawer)", "PLA", -95),
+    "dose_drawer": ("body",   "drawer",  "Dose drawer: slide out and pour", "PLA", -95),
+    "foot":        ("tpu",    "static",  "Feet", "TPU 95A", -110),
     "stir_post":   ("accent", "slide",   "Stir post (keeps powder flowing)", "PLA", 72),
     "name_plate":  ("accent", "slide",   "Name plate (swappable)", "PLA", 0),
     "name_inlay":  ("ink",    "slide",   "Name plate lettering", "PLA", 0),
@@ -50,7 +55,8 @@ PARTS = {
 }
 PARAM_NAMES = ["V_MAX", "ML_PER_CLICK", "CLICKS", "CLICK_DEG", "L_MAX", "STROKE", "PUCK_D", "NECK_OD",
                "MOUTH_ID", "BODY_OD", "JAR_H", "NECK_H", "T_LEN", "U_DIAL", "R_PIN_MAX", "R_PIN_NOM",
-               "SCROLL_LEAD", "JAW_ANGLES", "Z_RIM", "BAY_W", "BAY_D", "BAR_H", "SHAKER_H", "CH_W", "CH_H"]
+               "SCROLL_LEAD", "JAW_ANGLES", "Z_RIM", "PED_H", "ROW_PITCH", "CH_W", "CH_H",
+               "CUP_Y_REAR", "CUP_Y_FRONT", "CUP_W", "CUP_IN_H", "CUP_BOT_Z", "CUP_FLOOR_T", "HANDLE_L", "LOCK_LIFT"]
 
 
 def preset_args(name):
@@ -159,7 +165,7 @@ def export_key(key, preset, use_placeholder, jobs):
     with ThreadPoolExecutor(max_workers=jobs) as ex:
         results = dict(ex.map(one, PARTS.keys()))
     scene = trimesh.Scene()
-    meta_parts, missing = {}, []
+    meta_parts, missing, kept = {}, [], {}
     for name, (role, group, label, material, explode) in PARTS.items():
         path = results.get(name)
         mesh = trimesh.load(path, force="mesh") if path else None
@@ -169,6 +175,7 @@ def export_key(key, preset, use_placeholder, jobs):
             missing.append(name)
             continue
         scene.add_geometry(mesh, node_name=name, geom_name=name)
+        kept[name] = mesh
         info = {"role": role, "group": group, "label": label, "material": material, "explode": explode}
         if group == "jaw":
             info["angle"] = p["JAW_ANGLES"][int(name[-1])]
@@ -176,6 +183,7 @@ def export_key(key, preset, use_placeholder, jobs):
     jar, powder = jar_meshes(p)
     scene.add_geometry(jar, node_name="jar", geom_name="jar")
     scene.add_geometry(powder, node_name="powder", geom_name="powder")
+    kept["jar"], kept["powder"] = jar, powder
     meta_parts["jar"] = {"role": "glass", "group": "jar", "label": "Your glass jar, upside down", "material": "glass", "explode": 235}
     meta_parts["powder"] = {"role": "powder", "group": "jar", "label": "Powder", "material": "", "explode": 235}
     ring_closed = -(p["R_PIN_MAX"] - p["R_PIN_NOM"]) / p["SCROLL_LEAD"] * 360
@@ -183,11 +191,15 @@ def export_key(key, preset, use_placeholder, jobs):
         "key": key, "preset": preset, "class_v": p["V_MAX"],
         "v_max": p["V_MAX"], "ml_per_click": p["ML_PER_CLICK"], "clicks": p["CLICKS"],
         "puck_d": p["PUCK_D"], "stroke": p["STROKE"], "neck_od": p["NECK_OD"],
-        "bay_w": p["BAY_W"], "bar_h": p["BAR_H"],
+        "row_pitch": p["ROW_PITCH"], "ped_h": p["PED_H"],
+        "cup": {"y_rear": p["CUP_Y_REAR"], "y_front": p["CUP_Y_FRONT"], "w": p["CUP_W"], "in_h": p["CUP_IN_H"],
+                "bot_z": p["CUP_BOT_Z"], "floor_t": p["CUP_FLOOR_T"], "travel": abs(p["CUP_Y_FRONT"] - p["CUP_Y_REAR"]) * 0.85},
         "kin": {"stroke": p["STROKE"], "l_max": p["L_MAX"], "v_max": p["V_MAX"], "ml_per_click": p["ML_PER_CLICK"],
                 "click_deg": p["CLICK_DEG"], "dial_axis": [0, p["T_LEN"] / 2 - p["U_DIAL"]],
                 "ring_phi_open": 0, "ring_phi_closed": ring_closed,
                 "r_pin_open": p["R_PIN_MAX"], "r_pin_closed": p["R_PIN_NOM"], "jaw_angles": p["JAW_ANGLES"]},
+        "drop_y": p["T_LEN"] / 2 - (p["STROKE"] - 0.5 + p["STROKE"] + p["L_MAX"] + 1.0) / 2,
+        "rim_z": p["Z_RIM"], "jar_h": p["JAR_H"],
         "parts": meta_parts, "missing": missing,
     }
     OUT.mkdir(parents=True, exist_ok=True)
@@ -195,17 +207,43 @@ def export_key(key, preset, use_placeholder, jobs):
     (OUT / f"{key}.glb").write_bytes(glb)
     (OUT / f"{key}.json").write_text(json.dumps(meta, indent=1))
     print(f"{key}: {len(meta_parts)} meshes, {len(glb)/1e6:.1f} MB, missing: {missing}")
-    return meta
+    return meta, kept
+
+
+def export_row(meta, kept, n=3):
+    """n std heads on pedestals, lined up ROW_PITCH apart."""
+    scene = trimesh.Scene()
+    parts = {}
+    pitch = meta["row_pitch"]
+    for i in range(n):
+        dx = (i - (n - 1) / 2) * pitch
+        for name, mesh in kept.items():
+            m = mesh.copy()
+            m.apply_translation([dx, 0, 0])
+            node = f"h{i}_{name}"
+            scene.add_geometry(m, node_name=node, geom_name=node)
+            info = dict(meta["parts"][name])
+            info["head"] = [dx, 0]
+            parts[node] = info
+    row = dict(meta)
+    row.update({"key": "row", "parts": parts})
+    glb = trimesh.exchange.gltf.export_glb(scene)
+    (OUT / "row.glb").write_bytes(glb)
+    (OUT / "row.json").write_text(json.dumps(row, indent=1))
+    print(f"row: {len(parts)} meshes, {len(glb)/1e6:.1f} MB")
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--keys", default="std,pro")
+    ap.add_argument("--keys", default="std,pro", help="comma list of std, pro, row (row is built from std)")
     ap.add_argument("--placeholder", action="store_true")
     ap.add_argument("--jobs", type=int, default=3)
     a = ap.parse_args()
-    for key in a.keys.split(","):
-        export_key(key, {"std": "std", "pro": "pro"}.get(key, key), a.placeholder, a.jobs)
+    keys = a.keys.split(",")
+    for key in [k for k in keys if k != "row"]:
+        meta, kept = export_key(key, {"std": "std", "pro": "pro"}.get(key, key), a.placeholder, a.jobs)
+        if key == "std" and ("row" in keys or a.keys == "std,pro"):
+            export_row(meta, kept)
 
 
 if __name__ == "__main__":

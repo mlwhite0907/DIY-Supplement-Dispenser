@@ -1,4 +1,12 @@
-# Dose Bar v5: design intent (draft 0)
+# Dose Bar v5: design intent
+
+## How you use it
+
+1. **Set the dial once.** Lift the dial ~2 mm, turn it to your mL, and let go. It drops into a lock, so bumping it or pulling the handle can't change it.
+2. **Pull the dose handle and let go.** That's the little drawer front the dial sits on: about 1½ in out, then it springs back. One pull measures one level dose. It falls into the **dose drawer** in the pedestal below.
+3. **Slide the dose drawer out and pour** it into your cup (it has a pour spout). Slide it back.
+
+Two pulls before pouring = a double dose. Heads sit on their own low pedestals and line up side by side on a table, counter or cabinet shelf. Nothing has to fit under a head.
 
 > **Status:** draft 0. These are the design intent and starting numbers. A design-review pass will check them before CAD starts. Each number is marked as a target or as an assumption until the parametric model and the test prints confirm it.
 
@@ -8,8 +16,8 @@ A manual, no-electronics powder dispenser built around the glass jars you alread
 
 - Each jar is flipped upside down onto its own **head**.
 - You set a **dose dial**, in mL, once.
-- Each **pull** of the drawer drops one dose into the cup. Let go and it springs back.
-- Heads sit on a **modular bar**. Each bay bolts onto the next, so the bar grows with your jar collection.
+- Each **pull** of the dose handle drops one dose into the **dose drawer** below. Let go and the handle springs back. Slide the dose drawer out and pour.
+- Each head sits on its own **pedestal**. Pedestals line up side by side, and adding a jar means printing one more head.
 
 | Goal | How v5 meets it |
 |---|---|
@@ -78,7 +86,10 @@ Throughout the stroke the throat stays covered by the slide's solid **rear secti
 - A **pinion under the dial** drives the rack. The dial is a single turn, ~300°, with **40 clicks**. Hard stops sit at 0 and at max.
 - **Dial at 0:** the plunger touches the rear wall, so the chamber volume is zero and the head is locked off.
 - The plunger is at least as long as the throat. Whatever the setting, the part of the throat not over the chamber sits over the plunger's solid top.
-- The **TPU detent** gives a crisp click per step. It is firm enough that pulling the handle can't turn the dial.
+- **Locking dial ("set it and forget it"):**
+  - Matching V-teeth under the dial and on a keyed PLA lock ring hold it in one of 40 positions.
+  - Lift the dial 2.4 mm to turn it. A TPU spring pulls it back down into the lock.
+  - Pulling the handle or bumping the dial can't change the dose.
 
 | Dose class | Range | Per click | Chamber W × H (mm) | L_max (mm) | Pinion |
 |---|---|---|---|---|---|
@@ -135,22 +146,21 @@ Cohesive powders can arch or rat-hole over a ~32 mm slot. These include whey, co
 - **Pull force target:** 6–10 N (a light drawer). There's a soft TPU pull lip.
 - **Return stop:** a light knock at the end of the return helps settle the powder. It is damped enough to be quiet.
 
-### 4.7 Outlet
+### 4.7 Outlet → dose drawer
 
-- The drop hole steps down into a round spout of about 28 mm, centered front-of-jar under the head, aimed at a shaker mouth of ≥ 45 mm.
-- The spout walls are ≥ 60° from horizontal.
+- The drop hole opens straight down through the head's bottom into the **dose drawer** in the pedestal (a ~40 mm drop).
+- The drawer is a smooth tray with big internal radii and a pour spout.
+- It lines up under the dose handle and slides out toward you.
 
-## 5. Modular bar (expandable)
+## 5. Pedestals (expandable, cabinet-friendly)
 
-- **Bay:** a top plate with a dock ring (the head drops in and is keyed so it can't slide when pulled) and a spout opening. The cup sits under it.
-- **Legs:** shared between neighbouring bays. N bays need N + 1 legs.
-- **Joining:** bays join with printed keys and M4 screws.
-- **To add a jar:** print 1 bay plate + 1 leg and bolt them on.
-- **Height:** bar height = your shaker height (lid off) + 10 mm. This is a parameter.
-- **Stability:**
-  - TPU feet.
-  - A joined bar resists the pull moment.
-  - Optional wall tab.
+- **Pedestal:** a low round base, the same diameter as the head. The head drops onto 2 dock pins.
+  - It houses the **dose drawer**, which slides out toward you.
+  - TPU feet underneath.
+- **Line them up:** pedestals sit side by side on a table, counter or cabinet shelf. Optional joiner clips keep a row straight.
+- **Heights:** about 30 cm with a 6.5″ jar and about 25 cm with a 4.5″ jar. The protein jar is taller; give it a tall shelf or the counter.
+- **To add a jar:** print one more head and pedestal.
+- **Stability:** wide 157 mm footprint + TPU feet. A single head doesn't tip when you pull the handle.
 
 ## 6. Expandability: generator
 

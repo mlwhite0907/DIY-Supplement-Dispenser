@@ -47,7 +47,13 @@ Neck OD and mouth ID are **unmeasured estimates**. The chuck grips ±10 mm aroun
 
 - **Stir post:** a slim PLA rake that plugs into the slide's rear section. It rises through a slot behind the throat and a keyway in the funnel into the jar neck. It sweeps about 37 mm on every pull and every return to stop bridging and rat-holing of cohesive powders (whey, collagen, BCAA, pre-workout). It replaced the earlier pivoting "stir wand" idea.
 - **Return:** two TPU 95A bands. Routing: slide side hook → around a rear post (pulley) → front anchor, ≈+18 % strain. A hair tie or rubber band can loop hook ↔ rear post directly.
-- **Bar:** modular bays (plate + shared legs; N bays = N + 1 legs) with dock pins and a U-shaped cup opening. Bar height = shaker height + 12.
+- **Use (decided with the owner on 2026-11-27):**
+  1. Set the locking dial once (lift, turn, release).
+  2. Pull the dose handle and let go. One dose drops into the **dose drawer** in the head's pedestal.
+  3. Slide the drawer out and pour into a cup.
+  - Heads live in a cabinet or lined up on a table, so nothing goes under a head. The old tall bar was removed.
+- **Pedestal:** a low round base per head (Ø = head) with dock pins, the dose-drawer bay and TPU feet. Optional joiners line up a row.
+- **Locking dial:** a PLA lock ring with 48 V-teeth plus matching teeth under the dial. Lift 2.4 mm to turn; a TPU spring under the pinion cap pulls it back down. The pinion is axially captured and the dial's hex key slides through it.
 
 ## 3. Files
 
@@ -71,7 +77,9 @@ Neck OD and mouth ID are **unmeasured estimates**. The chuck grips ±10 mm aroun
 |---|---|
 | Design intent, contract, params, libs, presets, coupon, guides | ✅ done |
 | Design review panel (5 lenses + research + red team) | 🔄 running; findings will land in `docs/v5/reviews/` |
-| Parts: BODY, DRAWER, CHUCK, BAR | 🔄 being implemented in parallel; files are stubs until each group lands |
+| Parts: base, deck, ring, jaws | 🔄 first versions in repo; review + fix running |
+| Parts: slide, drive (plunger, dial, pinion, lock ring, dial spring, pinion cap) | 🔄 rebuilding for the locking dial |
+| Parts: pedestal, dose drawer, feet, joiner | 🔄 being built (replaced the tall bar) |
 | Tools: build.py / fitcheck.py / render_all.py | 🔄 work in progress (first versions committed) |
 | Integration: fit check across states, renders, interactive 3D viewer | ⏳ next |
 | Docs: DIAL_SETTINGS (generic chart), ASSEMBLY, README front page, archive v0.2 | ⏳ next |

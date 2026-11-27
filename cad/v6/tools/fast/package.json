@@ -1,0 +1,7 @@
+{
+  "name": "dosebar-fast-render",
+  "private": true,
+  "type": "module",
+  "description": "Optional fast renderer: OpenSCAD compiled to WebAssembly with the Manifold backend (seconds instead of minutes).",
+  "dependencies": { "openscad-wasm-prebuilt": "1.2.0" }
+}

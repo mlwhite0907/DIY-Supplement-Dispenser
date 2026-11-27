@@ -1,0 +1,277 @@
+{
+ "key": "pro",
+ "preset": "pro",
+ "v_max": 100.0,
+ "ml_per_click": 2.5,
+ "clicks": 40,
+ "puck_d": 170.0,
+ "stroke": 79.4159,
+ "neck_od": 121.0,
+ "ped_h": 37.0,
+ "rim_z": 97.6,
+ "jar_h": 292.0,
+ "row_pitch": 176.0,
+ "body": [
+  170.0,
+  228.539
+ ],
+ "kin": {
+  "stroke": 79.4159,
+  "l_max": 31.4159,
+  "v_max": 100.0,
+  "ml_per_click": 2.5,
+  "click_deg": 7.5,
+  "dial_axis": [
+   0,
+   -72.5659
+  ],
+  "ring_phi_open": 0,
+  "ring_phi_closed": 54.99995416670487,
+  "r_pin_open": 76.7,
+  "r_pin_closed": 71.7,
+  "wand": {
+   "y": 12.0,
+   "z": 93.0,
+   "arm": 44.4,
+   "u_home": -4.0,
+   "notch_u0": -62.4097,
+   "hw": 2.7938,
+   "u": 8.0
+  }
+ },
+ "drop_y": 2,
+ "cup": {
+  "w": 88.3134,
+  "y_front": -105.523,
+  "y_rear": 31.0,
+  "in_h": 30,
+  "bot_z": 3.3999999999999986,
+  "floor_t": 1.6,
+  "travel": 195.523
+ },
+ "parts": {
+  "mat": {
+   "role": "tpu",
+   "group": "static",
+   "label": "Mat tile (TPU): grips the counter, locks to its neighbours",
+   "material": "TPU",
+   "explode": 0
+  },
+  "tub": {
+   "role": "body",
+   "group": "static",
+   "label": "Tub: houses the scoop",
+   "material": "PLA",
+   "explode": 0
+  },
+  "scoop": {
+   "role": "body",
+   "group": "scoop",
+   "label": "Scoop drawer: pull it, pour from it",
+   "material": "PLA",
+   "explode": 0
+  },
+  "latch": {
+   "role": "tpu",
+   "group": "scoop",
+   "label": "Latch flaps (TPU): couple scoop and slide, let go at a tug",
+   "material": "TPU",
+   "explode": 0
+  },
+  "chassis": {
+   "role": "body",
+   "group": "static",
+   "label": "Chassis: floor, rails, stop piers",
+   "material": "PLA",
+   "explode": 40
+  },
+  "stop_boot": {
+   "role": "tpu",
+   "group": "static",
+   "label": "Stop boots (TPU)",
+   "material": "TPU",
+   "explode": 40
+  },
+  "bumper": {
+   "role": "tpu",
+   "group": "static",
+   "label": "Bumper and home catch (TPU)",
+   "material": "TPU",
+   "explode": 40
+  },
+  "slide": {
+   "role": "body",
+   "group": "slide",
+   "label": "Dose slide: chamber, dial, name band",
+   "material": "PLA",
+   "explode": 85
+  },
+  "name_plate": {
+   "role": "accent",
+   "group": "slide",
+   "label": "Name band",
+   "material": "PLA",
+   "explode": 85
+  },
+  "name_inlay": {
+   "role": "ink",
+   "group": "slide",
+   "label": "Name",
+   "material": "PLA",
+   "explode": 85
+  },
+  "pawl": {
+   "role": "body",
+   "group": "slide",
+   "label": "Click pawl",
+   "material": "PLA",
+   "explode": 85
+  },
+  "pawl_spring": {
+   "role": "tpu",
+   "group": "slide",
+   "label": "Pawl spring (TPU)",
+   "material": "TPU",
+   "explode": 85
+  },
+  "plunger": {
+   "role": "body",
+   "group": "plunger",
+   "label": "Plunger + rack: sets the chamber length",
+   "material": "PLA",
+   "explode": 85
+  },
+  "dial": {
+   "role": "accent",
+   "group": "dial",
+   "label": "Dose dial (mL): hidden until you pull",
+   "material": "PLA",
+   "explode": 115
+  },
+  "dial_inlay": {
+   "role": "ink",
+   "group": "dial",
+   "label": "Dial numerals",
+   "material": "PLA",
+   "explode": 115
+  },
+  "seal": {
+   "role": "tpu",
+   "group": "static",
+   "label": "U-seal (TPU): wipes the slide top",
+   "material": "TPU",
+   "explode": 135
+  },
+  "funnel": {
+   "role": "body",
+   "group": "static",
+   "label": "Funnel insert: throat, strike-off edge, hub",
+   "material": "PLA",
+   "explode": 150
+  },
+  "wand": {
+   "role": "body",
+   "group": "wand",
+   "label": "Agitator gate: stops sticky powder bridging",
+   "material": "PLA",
+   "explode": 150
+  },
+  "wand_arm": {
+   "role": "body",
+   "group": "wand",
+   "label": "Gate arm",
+   "material": "PLA",
+   "explode": 150
+  },
+  "wand_finger": {
+   "role": "tpu",
+   "group": "wand",
+   "label": "Drive finger (TPU): flexes away if the gate jams",
+   "material": "TPU",
+   "explode": 150
+  },
+  "shell": {
+   "role": "body",
+   "group": "static",
+   "label": "Shell",
+   "material": "PLA",
+   "explode": 215
+  },
+  "ring": {
+   "role": "accent",
+   "group": "ring",
+   "label": "Twist ring: three jaws close together",
+   "material": "PLA",
+   "explode": 250
+  },
+  "guide_plate": {
+   "role": "body",
+   "group": "static",
+   "label": "Guide plate",
+   "material": "PLA",
+   "explode": 275
+  },
+  "jaw0": {
+   "role": "body",
+   "group": "jaw",
+   "label": "Jaw",
+   "material": "PLA",
+   "explode": 295,
+   "angle": 30.0
+  },
+  "jaw1": {
+   "role": "body",
+   "group": "jaw",
+   "label": "Jaw",
+   "material": "PLA",
+   "explode": 295,
+   "angle": 150.0
+  },
+  "jaw2": {
+   "role": "body",
+   "group": "jaw",
+   "label": "Jaw",
+   "material": "PLA",
+   "explode": 295,
+   "angle": 270.0
+  },
+  "jaw_boot0": {
+   "role": "tpu",
+   "group": "jaw",
+   "label": "Jaw boot (TPU)",
+   "material": "TPU",
+   "explode": 295,
+   "angle": 30.0
+  },
+  "jaw_boot1": {
+   "role": "tpu",
+   "group": "jaw",
+   "label": "Jaw boot (TPU)",
+   "material": "TPU",
+   "explode": 295,
+   "angle": 150.0
+  },
+  "jaw_boot2": {
+   "role": "tpu",
+   "group": "jaw",
+   "label": "Jaw boot (TPU)",
+   "material": "TPU",
+   "explode": 295,
+   "angle": 270.0
+  },
+  "gasket": {
+   "role": "tpu",
+   "group": "static",
+   "label": "Gasket (TPU): the jar rim sits on it",
+   "material": "TPU",
+   "explode": 305
+  },
+  "jar": {
+   "role": "glass",
+   "group": "jar",
+   "label": "Your glass jar, upside down",
+   "material": "",
+   "explode": 345
+  }
+ }
+}

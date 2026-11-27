@@ -1,0 +1,436 @@
+{
+ "preset": "pro",
+ "dose_class": "L",
+ "defs": [
+  "JAR_NAME=\"pro\"",
+  "NECK_OD=121",
+  "MOUTH_ID=108",
+  "BODY_OD=160",
+  "JAR_H=292",
+  "NECK_H=16",
+  "DOSE_CLASS=\"L\""
+ ],
+ "parts": [
+  {
+   "part": "tub",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    170.0,
+    228.5,
+    37.4
+   ],
+   "solid_cm3": 105.3,
+   "solid_g": 130.6,
+   "fits_256": true
+  },
+  {
+   "part": "scoop",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    93.5,
+    175.5,
+    33.1
+   ],
+   "solid_cm3": 74.6,
+   "solid_g": 92.5,
+   "fits_256": true
+  },
+  {
+   "part": "chassis",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    162.4,
+    220.9,
+    42.6
+   ],
+   "solid_cm3": 160.9,
+   "solid_g": 199.5,
+   "fits_256": true
+  },
+  {
+   "part": "funnel",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    131.3,
+    221.7,
+    48.0
+   ],
+   "solid_cm3": 239.0,
+   "solid_g": 296.4,
+   "fits_256": true
+  },
+  {
+   "part": "shell",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    170.0,
+    228.5,
+    75.8
+   ],
+   "solid_cm3": 131.3,
+   "solid_g": 162.8,
+   "fits_256": true
+  },
+  {
+   "part": "slide",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    97.5,
+    215.9,
+    46.9
+   ],
+   "solid_cm3": 498.4,
+   "solid_g": 618.0,
+   "fits_256": true
+  },
+  {
+   "part": "plunger",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    82.3,
+    95.7,
+    39.8
+   ],
+   "solid_cm3": 132.5,
+   "solid_g": 164.3,
+   "fits_256": true
+  },
+  {
+   "part": "dial",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    36.0,
+    36.0,
+    35.1
+   ],
+   "solid_cm3": 11.2,
+   "solid_g": 13.9,
+   "fits_256": true
+  },
+  {
+   "part": "dial_inlay",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    34.0,
+    34.0,
+    1.2
+   ],
+   "solid_cm3": 0.1,
+   "solid_g": 0.2,
+   "fits_256": true
+  },
+  {
+   "part": "pawl",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    4.5,
+    5.0,
+    4.4
+   ],
+   "solid_cm3": 0.1,
+   "solid_g": 0.1,
+   "fits_256": true
+  },
+  {
+   "part": "ring",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    170.0,
+    170.0,
+    14.0
+   ],
+   "solid_cm3": 140.6,
+   "solid_g": 174.3,
+   "fits_256": true
+  },
+  {
+   "part": "guide_plate",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    169.0,
+    168.9,
+    5.0
+   ],
+   "solid_cm3": 59.1,
+   "solid_g": 73.3,
+   "fits_256": true
+  },
+  {
+   "part": "jaw",
+   "material": "PLA",
+   "qty": 3,
+   "watertight": true,
+   "size_mm": [
+    14.0,
+    14.0,
+    22.4
+   ],
+   "solid_cm3": 3.0,
+   "solid_g": 3.8,
+   "fits_256": true
+  },
+  {
+   "part": "wand",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    75.8,
+    40.5,
+    10.0
+   ],
+   "solid_cm3": 3.7,
+   "solid_g": 4.6,
+   "fits_256": true
+  },
+  {
+   "part": "wand_arm",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    53.5,
+    9.0,
+    24.6
+   ],
+   "solid_cm3": 2.3,
+   "solid_g": 2.9,
+   "fits_256": true
+  },
+  {
+   "part": "wand_finger",
+   "material": "TPU",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    8.2,
+    7.6,
+    21.8
+   ],
+   "solid_cm3": 0.5,
+   "solid_g": 0.7,
+   "fits_256": true
+  },
+  {
+   "part": "seal",
+   "material": "TPU",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    90.3,
+    46.4,
+    3.9
+   ],
+   "solid_cm3": 1.2,
+   "solid_g": 1.4,
+   "fits_256": true
+  },
+  {
+   "part": "gasket",
+   "material": "TPU",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    120.0,
+    120.0,
+    2.9
+   ],
+   "solid_cm3": 3.9,
+   "solid_g": 4.7,
+   "fits_256": true
+  },
+  {
+   "part": "jaw_boot",
+   "material": "TPU",
+   "qty": 3,
+   "watertight": true,
+   "size_mm": [
+    6.8,
+    16.4,
+    11.2
+   ],
+   "solid_cm3": 0.4,
+   "solid_g": 0.5,
+   "fits_256": true
+  },
+  {
+   "part": "stop_boot",
+   "material": "TPU",
+   "qty": 2,
+   "watertight": true,
+   "size_mm": [
+    18.9,
+    11.2,
+    14.4
+   ],
+   "solid_cm3": 1.2,
+   "solid_g": 1.4,
+   "fits_256": true
+  },
+  {
+   "part": "bumper",
+   "material": "TPU",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    23.2,
+    11.6,
+    39.4
+   ],
+   "solid_cm3": 2.0,
+   "solid_g": 2.4,
+   "fits_256": true
+  },
+  {
+   "part": "pawl_spring",
+   "material": "TPU",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    5.0,
+    5.0,
+    4.4
+   ],
+   "solid_cm3": 0.0,
+   "solid_g": 0.1,
+   "fits_256": true
+  },
+  {
+   "part": "latch",
+   "material": "TPU",
+   "qty": 2,
+   "watertight": true,
+   "size_mm": [
+    11.0,
+    8.0,
+    23.3
+   ],
+   "solid_cm3": 0.9,
+   "solid_g": 1.1,
+   "fits_256": true
+  },
+  {
+   "part": "mat",
+   "material": "TPU",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    182.0,
+    234.5,
+    4.0
+   ],
+   "solid_cm3": 83.4,
+   "solid_g": 100.9,
+   "fits_256": true
+  },
+  {
+   "part": "latch_soft",
+   "material": "TPU",
+   "qty": 0,
+   "watertight": true,
+   "size_mm": [
+    11.0,
+    8.0,
+    23.3
+   ],
+   "solid_cm3": 0.8,
+   "solid_g": 1.0,
+   "fits_256": true
+  },
+  {
+   "part": "latch_firm",
+   "material": "TPU",
+   "qty": 0,
+   "watertight": true,
+   "size_mm": [
+    11.0,
+    8.0,
+    23.3
+   ],
+   "solid_cm3": 1.0,
+   "solid_g": 1.2,
+   "fits_256": true
+  },
+  {
+   "part": "name_plate_PROTEIN",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    93.5,
+    15.6,
+    1.9
+   ],
+   "solid_cm3": 2.4,
+   "solid_g": 2.9,
+   "fits_256": true
+  },
+  {
+   "part": "name_inlay_PROTEIN",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    31.7,
+    5.1,
+    1.2
+   ],
+   "solid_cm3": 0.1,
+   "solid_g": 0.1,
+   "fits_256": true
+  },
+  {
+   "part": "name_plate_WHEY",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    93.5,
+    15.6,
+    1.9
+   ],
+   "solid_cm3": 2.4,
+   "solid_g": 3.0,
+   "fits_256": true
+  },
+  {
+   "part": "name_inlay_WHEY",
+   "material": "PLA",
+   "qty": 1,
+   "watertight": true,
+   "size_mm": [
+    22.8,
+    5.0,
+    1.2
+   ],
+   "solid_cm3": 0.1,
+   "solid_g": 0.1,
+   "fits_256": true
+  }
+ ],
+ "note": "Use the fit-test coupon in stl/v6/std-M: the drivetrain, jaw track, latch and seal fits are identical on every head."
+}

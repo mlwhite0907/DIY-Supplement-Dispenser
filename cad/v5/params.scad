@@ -1,250 +1,302 @@
 // ============================================================================
-// Dose Bar v5 — MASTER PARAMETERS + INTERFACE DATUMS
+// Dose Bar v5.1 — MASTER PARAMETERS + INTERFACE DATUMS
 // Every part file includes this. Nothing about a part's mating features may be
 // hard-coded in the part: take it from here so all parts always fit.
 //
 // HEAD COORDINATES (assembled):  x = user's right, y = AWAY from the user
 // (front of the head is -y, like OpenSCAD's front view), z = up.
 //   Origin: jar axis, at the head's bottom face (= underside of channel floor).
-//   The jar sits upside down on top of the head.
+//   The jar sits upside down on top of the head; the head sits on its pedestal
+//   (pedestal occupies z < 0).
 //
 // "u" = distance along the PULL direction (toward the user, u = -y).
 //   Body u = 0 is the throat's REAR edge. The throat spans u in [0, T_LEN].
 //   hy(u) converts body u to head y.
+//
+// v5.1 (design-review fixes): sealed transit (long stroke), push-pull drawer
+// (no springs), locking dial, mirrored chuck (closes like a lid when refilling),
+// 0.2 mm Z grid, pill-shaped body, pedestal + dose drawer, bundled fonts.
 //
 // Jar preset values come from presets/*.scad. build.py passes them with -D,
 // which overrides the defaults included below (last assignment wins).
 // ============================================================================
 include <lib/style.scad>
 include <presets/std.scad>
+use <fonts/Inter-Bold.otf>
+use <fonts/Inter-SemiBold.otf>
+use <fonts/Inter-Medium.otf>
+
+LH = 0.2;                                  // print layer height; Z datums sit on this grid
+function zq(z) = ceil(z/LH - 1e-6)*LH;     // round a height UP to the layer grid
+TXT_K = 1.0105;                            // Inter cap height = TXT_K * text size (measured)
+function txt_size(cap) = cap/TXT_K;
+FONT_BOLD = "Inter:style=Bold";
+FONT_SEMI = "Inter:style=SemiBold";
 
 // ---------- assembly state (override with -D for posed exports) -------------
-STATE_PULL  = 0;       // 0 = rest, 1 = full pull
+STATE_PULL  = 0;       // 0 = drawer home (pushed in), 1 = pulled out to the stop
 DIAL_ML     = -1;      // dial setting in mL; -1 = half of max
 CHUCK_CLOSE = 1;       // 0 = fully open, 1 = closed on a NECK_OD jar
+DRAWER_OUT  = 0;       // dose drawer: 0 = in, 1 = slid out
 
 // ---------- dose class ----------------------------------------------------------
-// One drivetrain for every head (same pinion, rack, stroke and dial travel).
-// Only the chamber's cross-section changes with the class.
-// [name, V_max mL, chamber height H (= slide thickness), dial diameter]
+// One drivetrain for every head (same pinion, rack and dial). The chamber's
+// cross-section changes with the class, and so does the minimum throat length.
+// Pick the class from the TARGET DOSE (docs/v5/DIAL_SETTINGS.md), not the jar:
+//   S: doses <= 18 mL   M: 18-38 mL   L: > 38 mL (protein, big collagen)
+// [name, V_max mL, chamber height H (= slide thickness), min throat length]
 CLASSES = [
     ["S", 20, 18, 30],
-    ["M", 40, 24, 32],
-    ["L", 80, 34, 36],
+    ["M", 40, 24, 30],
+    ["L", 80, 34, 40],
 ];
 function _auto_class(mouth) = mouth >= 104 ? "L" : (mouth >= 70 ? "M" : "S");
 CLASS_NAME = DOSE_CLASS == "auto" ? _auto_class(MOUTH_ID) : DOSE_CLASS;
 _ci   = search([CLASS_NAME], CLASSES)[0];
 V_MAX = CLASSES[_ci][1];
-CH_H  = CLASSES[_ci][2];          // chamber height = slide body thickness
-DIAL_D = CLASSES[_ci][3];
+CH_H  = CLASSES[_ci][2];          // chamber height = slide body thickness (multiple of LH)
+T_MIN = CLASSES[_ci][3];
 G_M   = 1.0;                      // gear module (all classes)
 G_Z   = 12;                       // pinion teeth (all classes)
 G_PA  = 25;                       // pressure angle (stub teeth, addendum 0.85 m)
 G_ADD = 0.85;
 G_CK  = 0.25;
-CLICKS    = 40;                   // detent steps 0..CLICKS
+CLICKS    = 40;                   // dial positions 0..CLICKS
 CLICK_DEG = 7.5;                  // 40 x 7.5 = 300 deg of dial travel
 DIAL_TRAVEL  = CLICKS*CLICK_DEG;
 ML_PER_CLICK = V_MAX/CLICKS;
-DETENT_TEETH = round(360/CLICK_DEG);   // 48 notches per revolution
+LOCK_TEETH   = round(360/CLICK_DEG);   // 48 lock teeth per revolution
+DETENT_TEETH = LOCK_TEETH;             // (legacy name)
 
 G_RP  = G_M*G_Z/2;                         // pinion pitch radius
 G_CD  = G_RP;                              // pinion axis -> rack pitch line
-L_MAX = G_RP*DIAL_TRAVEL*PI/180;           // plunger travel = max chamber length
+L_MAX = G_RP*DIAL_TRAVEL*PI/180;           // plunger travel = max chamber length (31.4)
 CH_W  = V_MAX*1000/(CH_H*L_MAX);           // width so one click == ML_PER_CLICK exactly
 DIAL_SET = DIAL_ML < 0 ? V_MAX/2 : min(V_MAX, max(0, DIAL_ML));
 CH_L  = DIAL_SET/V_MAX*L_MAX;              // current chamber length
 DIAL_ANGLE = -DIAL_SET/ML_PER_CLICK*CLICK_DEG;   // clockwise (from above) = more
+DIAL_ZERO_GAP = 0.10;                      // plunger stops 0.1 mm off the rear wall at 0 (dial stop does it)
 
-// ---------- slide / throat rules (body u) --------------------------------------
-T_LEN   = L_MAX + 1.0;            // throat length along u
-T_WID   = CH_W;                   // throat width along x
-LAND    = 5.0;                    // seal land: strike-off edge -> drop hole
-STROKE  = T_LEN + LAND;           // pull distance
+// ---------- slide / throat: SEALED TRANSIT (body u) ------------------------------
+// The chamber must be closed at the top (past the strike-off edge) BEFORE any
+// part of it reaches the drop hole. So the land from the strike-off edge to
+// the drop hole is at least L_MAX + LAND, and the stroke carries the whole
+// chamber across it. (Draft 0 had a 5 mm land: powder could pour through.)
+T_LEN   = max(L_MAX + 1.0, T_MIN);   // throat length along u (>= 30 / 40 mm for flow)
+T_WID   = CH_W;                      // throat width along x
+LAND    = 5.0;                       // closed window between top-seal and drop hole
+OVERTRAVEL = 3.0;
+STROKE  = T_LEN + L_MAX + LAND + OVERTRAVEL;   // pull distance (~72 / ~80 mm)
 PULL_D  = STATE_PULL*STROKE;
-POST_D  = 4.0;                    // stir-post stem diameter
-POST_PEG = 4.0;                   // square peg at the post's foot
-POST_SOCKET = POST_PEG + 2*CL_PLUNGER;   // square socket in slide top (slide-local u = POST_U0)
-POST_SOCKET_DEPTH = 8;
-POST_U0 = -LAND - POST_D/2 - 1;   // post centre at rest; at full pull it ends 1 mm short of strike-off
-SLOT_U0 = POST_U0 - POST_D/2 - 1.5;   // rear end of the post slot in the ceiling
-SLOT_HW = POST_D/2 + 0.75;            // post slot half-width
-KEYWAY_H = 16;                    // keyway in funnel rear wall above ceiling top (post clearance)
-REAR_L  = STROKE - SLOT_U0 + 6;   // solid rear section behind the chamber rear wall
-PLUNGER_L = T_LEN + 1.0;          // plunger always floors the rest of the throat
-SLOT_L  = L_MAX + PLUNGER_L;      // chamber + plunger slot length
-BULK_T  = 4.0;                    // bulkhead between slot and neck
-SIDE_W  = 4.0;                    // slide wall beside the chamber
+HOLE_U0 = T_LEN + L_MAX + LAND;      // drop hole rear edge
+HOLE_U1 = STROKE + L_MAX + 1.0;      // drop hole front edge
+HOLE_R  = 4;                         // drop hole corner radius (rear 3 mm square-cornered)
+SEAL_WINDOW = HOLE_U0 - (T_LEN + L_MAX);   // = LAND (asserted >= 5)
+REAR_L  = STROKE + 6;                // solid rear section keeps the throat covered at full pull
+PLUNGER_L = T_LEN + 1.0;             // plunger always floors the rest of the throat
+SLOT_L  = L_MAX + PLUNGER_L;         // chamber + plunger slot length
+BULK_T  = 4.0;                       // bulkhead between slot and neck
+SIDE_W  = 4.0;                       // slide wall beside the chamber
 SLIDE_W = CH_W + 2*SIDE_W;
-HOLE_U0 = STROKE - 0.5;           // drop hole rear edge (body u)
-HOLE_U1 = STROKE + L_MAX + 1.0;   // drop hole front edge
-HOLE_R  = 6;                      // drop hole corner radius
-function hy(u) = T_LEN/2 - u;     // body u -> head y
-SLIDE_Y0 = T_LEN/2 - PULL_D;      // head y of the slide's local origin (chamber rear wall)
+SLIDE_REAR_CHAMFER = 8;              // plan chamfer on the slide's rear corners
+function hy(u) = T_LEN/2 - u;        // body u -> head y
+SLIDE_Y0 = T_LEN/2 - PULL_D;         // head y of the slide-local origin (chamber rear wall)
 // Slide-local frame: same axes as head, origin at chamber rear wall, slide
 // extends toward -y (front). Place with translate([0, SLIDE_Y0, 0]).
 
-// ---------- vertical stack ----------------------------------------------------
+// ---------- vertical stack (0.2 mm grid) -------------------------------------------
 FLOOR_T = 3.0;
-CL_VT   = 0.30;                   // slide top -> ceiling clearance
+CL_VT   = 0.20;                   // slide top -> ceiling (one layer); slide rides on the floor
 Z_FLOOR = FLOOR_T;                // slide running surface
 Z_SLIDE_TOP = Z_FLOOR + CH_H;
 Z_CEIL  = Z_SLIDE_TOP + CL_VT;    // ceiling underside == base/deck joint plane
 CEIL_T  = 3.2;
 Z_CEIL_TOP = Z_CEIL + CEIL_T;
-FUNNEL_ANGLE = 52;                // minimum funnel wall angle from horizontal
-MOUTH_R = MOUTH_ID/2 + 1;         // bore radius above the funnel (1 mm outside jar mouth)
-FUNNEL_H = (MOUTH_R - T_LEN/2)*tan(FUNNEL_ANGLE);
+FUNNEL_ANGLE = 52;                // minimum wall angle (front/back walls are the shallowest)
+MOUTH_R = MOUTH_ID/2 + 1;         // bore radius above the funnel (1 mm outside jar mouth: no ledge)
+FUNNEL_H = zq((MOUTH_R - T_LEN/2)*tan(FUNNEL_ANGLE));
 Z_FUNNEL_TOP = Z_CEIL_TOP + FUNNEL_H;   // == hub top == guide plate bottom
 GP_T    = 4.0;                    // guide plate thickness
 Z_GP_BOT = Z_FUNNEL_TOP;
 Z_GP_TOP = Z_GP_BOT + GP_T;
-GASKET_T = 2.0;  GASKET_PROUD = 0.6;
+// Gasket: 1.2 mm flange in a pocket (with a 0.3 mm undercut lip) + a 0.8 x 3.0 mm
+// sealing lip leaning 30 deg outward; the jar rim compresses it to ~2.0 mm.
+GASKET_POCKET = 1.2;  GASKET_FLANGE_T = 1.2;  GASKET_LIP = [0.8, 3.0, 30];
 GASKET_ID = 2*MOUTH_R;
 GASKET_OD = NECK_OD - 2;
+GASKET_T  = GASKET_FLANGE_T;      // (legacy name)
+GASKET_PROUD = 2.0;               // rim height above the guide plate, lip compressed
 Z_RIM   = Z_GP_TOP + GASKET_PROUD;  // jar rim rests here
-RING_T  = 10.0;                   // twist ring (the knurled band)
-Z_RING_TOP = Z_GP_BOT - 0.3;
-Z_RING_BOT = Z_RING_TOP - RING_T; // = deck flange top
-SKIN_T  = 2.4;                    // puck outer wall
+RING_T  = 14.0;                   // twist ring: a 13 mm fluted grip band
+Z_RING_TOP = Z_GP_BOT - 0.4;      // two layers of axial play
+Z_RING_BOT = Z_RING_TOP - RING_T; // = deck ring seat
+SKIN_T  = 2.0;                    // body outer wall
 
-// ---------- chuck ---------------------------------------------------------------
+// ---------- chuck (rigid self-locking centring fixture) --------------------------
+// Twisting the ring CLOSES the jaws when turned COUNTER-clockwise seen from +z
+// in head coordinates = CLOCKWISE for the user in the refill pose (jar upright,
+// head on top), exactly like tightening a lid. 110 deg from open to closed.
 CH_RANGE_D = 20;                  // grip range on diameter: NECK_OD +/- 10
-PAD_T   = 2.0;                    // TPU pad thickness
+PAD_T   = 1.2;                    // TPU skin (slip-on boot) on each rigid jaw
 PIN_OFF = 10.0;                   // jaw PLA face -> pin centre (radial)
-PIN_D   = 4.0;
-GROOVE_W = PIN_D + 0.5;
-SCROLL_DEPTH = 3.0;
+PIN_D   = 6.0;                    // D-section pin, jaw printed on its side
+GROOVE_W = 6.5;
+SCROLL_DEPTH = 5.0;
 R_FACE_NOM = NECK_OD/2 + PAD_T;   // jaw PLA face radius when gripping a NECK_OD jar
-R_PIN_MIN  = NECK_OD/2 - CH_RANGE_D/4 + PAD_T + PIN_OFF - 1.5;
-R_PIN_MAX  = NECK_OD/2 + CH_RANGE_D/4 + PAD_T + PIN_OFF + 1.5;
+R_PIN_MIN  = NECK_OD/2 - CH_RANGE_D/4 + PAD_T + PIN_OFF;
+R_PIN_MAX  = NECK_OD/2 + CH_RANGE_D/4 + PAD_T + PIN_OFF;
 R_PIN_NOM  = R_FACE_NOM + PIN_OFF;
-TWIST   = 150;                    // ring twist across R_PIN_MAX -> R_PIN_MIN
+TWIST   = 110;                    // ring rotation across R_PIN_MAX -> R_PIN_MIN (groove ends = stops)
 SCROLL_LEAD = (R_PIN_MAX - R_PIN_MIN)*360/TWIST;   // radial advance per revolution
 SCROLL_LEAD_ANGLE = atan(SCROLL_LEAD/(PI*(R_PIN_MIN + R_PIN_MAX)));
+CHUCK_CLOSE_DIR = +1;             // +1 = closing turns CCW about +z (head coordinates)
 R_PIN = R_PIN_MAX - CHUCK_CLOSE*(R_PIN_MAX - R_PIN_NOM);   // current pin radius
-RING_PHI = -(R_PIN_MAX - R_PIN)/SCROLL_LEAD*360;   // ring rotation (clockwise closes)
-JAW_ANGLES = [270, 30, 150];      // front jaw at -y, two at the back corners
+RING_PHI = CHUCK_CLOSE_DIR*(R_PIN_MAX - R_PIN)/SCROLL_LEAD*360;   // ring rotation (deg, CCW +)
+JAW_ANGLES = [270, 30, 150];      // front jaw at -y on the centre plane, two at the back
 HUB_ID  = 2*MOUTH_R;
-HUB_WALL = 5.0;                   // thick enough for M3 pilots (guide plate screws)
+HUB_WALL = 5.0;                   // M3 pilots for the guide plate sit in hub bosses
 HUB_OD  = HUB_ID + 2*HUB_WALL;
 RING_ID = HUB_OD + 2*CL_ROT;
-RING_OD_CHUCK = 2*(R_PIN_MAX + GROOVE_W/2 + 4.0);       // what the chuck needs
-// The slide's rear section (needed to keep the throat covered during a pull)
-// must fit inside the puck with its corners chamfered <= 8 mm. Small jars get
-// a puck sized by the slide; the ring always matches the puck (uniform family).
-_rear_reach = T_LEN/2 + (STROKE - (POST_U0 - POST_D/2 - 1.5) + 6);
-PUCK_D_SLIDE = 2*(sqrt(pow(_rear_reach, 2) + pow((CH_W + 8)/2 - 8, 2)) + SKIN_T + 1.5);
-RING_OD = max(RING_OD_CHUCK, PUCK_D_SLIDE);
-PUCK_D  = RING_OD;                // round puck, flush with the ring
+RING_OD_CHUCK = 2*(R_PIN_MAX + GROOVE_W/2 + 4.5);
+PUCK_D  = RING_OD_CHUCK;          // round chuck collar / ring diameter
 PUCK_R  = PUCK_D/2;
+RING_OD = PUCK_D;
 GP_OD   = RING_OD - 4;            // guide plate sits 2 mm inside the ring's edge
-GP_SCREW_R = HUB_ID/2 + HUB_WALL/2;      // M3 guide-plate screws (under the gasket)
+GP_SCREW_R = HUB_ID/2 + HUB_WALL/2;
 GP_SCREW_ANGLES = [90, 210, 330];
-JAW_W   = 14;                     // tangential width
-JAW_H   = min(NECK_H - 1, 13);    // jaw height above guide plate
-JAW_L   = PIN_OFF + 6;            // radial length (face to back)
-DOVETAIL = [8, 11, 3];            // [top width, bottom width, depth] of the jaw track
+JAW_W   = 14;
+JAW_H   = min(NECK_H - 1, 13);
+JAW_L   = PIN_OFF + 6;
+DOVETAIL = [8, 11, 3];            // (legacy) jaw track; v5.1 jaws use a T-foot under the plate
 
-// ---------- base / deck joint, rails, bands, stops --------------------------------
-CHAN_HW = SLIDE_W/2 + CL_SLIDE;   // channel half width (slide guided by rails)
-RAIL_W  = 3.0;                    // channel side wall thickness (walls run full height Z_FLOOR..Z_CEIL)
-RAIL_H  = 4.0;                    // (legacy name) min guided height above/below the hook slot
-HOOK_SLOT_H = 7.0;                // horizontal slot in each channel wall for the band hook (centred Z_ROD)
-Y_REAR_WALL = hy(-REAR_L) + 1.0;  // channel rear wall (1 mm behind slide at rest)
-// Slide rear corners are chamfered so the slide always fits inside the puck.
-_rear_y = hy(-REAR_L);                         // slide rear end at rest (head y)
-_inner_r = PUCK_R - SKIN_T - 1.5;
-SLIDE_REAR_CHAMFER = max(2, SLIDE_W/2 - sqrt(max(1, _inner_r*_inner_r - _rear_y*_rear_y)) + 1);
-// Return bands: hook on each slide side near the FRONT of the slide's in-puck
-// part, band runs backward beside the slide to an anchor near the back of the
-// puck. Pulling stretches it. (TPU loop, or a hair tie / rubber band.)
-BAND_X  = CHAN_HW + RAIL_W + 3.0;      // band centreline |x|
-U_HOOK_S = T_LEN/2 + (PUCK_R - SKIN_T - 5) - STROKE;   // slide-local u of side hooks (stays inside puck at full pull)
-Y_BAND_ANCHOR = sqrt(max(1, pow(PUCK_R - SKIN_T - 6, 2) - BAND_X*BAND_X)) - 4;   // rear anchors (head y), x = +/-BAND_X
-BAND_SPAN_REST = Y_BAND_ANCHOR - hy(U_HOOK_S);         // hook -> rear post at rest
-// Low-strain TPU routing: hook -> around the REAR POST (pulley) -> forward to a
-// FRONT ANCHOR on the outside of the post. A hair tie / rubber band instead
-// just loops hook <-> rear post (rubber tolerates the higher strain).
-BAND_POST_D = 10;                                       // rear post diameter
-BAND_X_OUT  = BAND_X + BAND_POST_D;                     // outer strand |x|
-Y_BAND_FRONT = -sqrt(max(1, pow(PUCK_R - SKIN_T - 7, 2) - BAND_X_OUT*BAND_X_OUT)) + 3;  // front anchor head y
-BAND_PATH_REST = BAND_SPAN_REST + PI*BAND_POST_D/2 + (Y_BAND_ANCHOR - Y_BAND_FRONT);
-BAND_STRAIN_ADD = STROKE/BAND_SPAN_REST;                // direct (rubber) routing
-BAND_STRAIN_ADD_TPU = STROKE/BAND_PATH_REST;            // pulley routing
-U_STOP  = -9;                     // stop pin (body u); rides a groove in slide underside
-STOP_D  = 5.0;
-STOP_GROOVE = [U_STOP - STROKE - STOP_D/2 - 0.3, U_STOP + STOP_D/2 + 0.3];  // slide-local u range
-JOIN_SCREWS = [[-PUCK_R+16, -28], [PUCK_R-16, -28], [-PUCK_R+16, 30], [PUCK_R-16, 30]];  // head x,y; M3 from below
-DOCK_PINS = [[-PUCK_R+20, 26], [PUCK_R-20, 26]];   // locating holes in head bottom (pins on bay)
+// ---------- body footprint: a PILL (stadium) ------------------------------------------
+// The sealed-transit stroke needs more length than a Ø PUCK_D circle gives, so
+// the base, the deck's lower skin and the pedestal share one pill outline:
+// two semicircles of radius PUCK_R centred at y = PILL_YC_FRONT and PILL_YC_REAR,
+// joined by straight sides at x = +/-PUCK_R. The round chuck collar sits on it.
+_r_in    = PUCK_R - SKIN_T - 1.5;
+_rear_y  = hy(-REAR_L) + 1.0;
+_rear_x  = SLIDE_W/2 - SLIDE_REAR_CHAMFER;
+PILL_YC_REAR  = max(0, _rear_y - sqrt(max(1, _r_in*_r_in - _rear_x*_rear_x)));
+_hole_y  = hy(HOLE_U1) - 3;
+_hole_x  = CH_W/2 + 3;
+PILL_YC_FRONT = min(0, _hole_y + sqrt(max(1, _r_in*_r_in - _hole_x*_hole_x)));
+PILL_Y_FRONT  = PILL_YC_FRONT - PUCK_R;
+PILL_Y_REAR   = PILL_YC_REAR + PUCK_R;
+PILL_LEN      = PILL_Y_REAR - PILL_Y_FRONT;
+module pill_2d(inset=0) {
+    hull() {
+        translate([0, PILL_YC_FRONT]) circle(r=PUCK_R - inset, $fn=192);
+        translate([0, PILL_YC_REAR])  circle(r=PUCK_R - inset, $fn=192);
+    }
+}
+
+// ---------- channel, stops, seals ----------------------------------------------------
+CHAN_HW = SLIDE_W/2 + CL_SLIDE;   // channel half width
+RAIL_W  = 3.0;                    // channel wall thickness (full height Z_FLOOR..Z_CEIL)
+Y_REAR_WALL = hy(-REAR_L) + 1.0;  // channel rear wall (1 mm behind the slide at home)
+// Push-pull: no springs. Two M4 screws (from below, through the floor) wear TPU
+// sleeves in the side channels; a lug at the slide's rear corners stops on them
+// at full pull (front sleeves) and at home (rear sleeves). Remove the two front
+// screws to take the slide out for washing.
+STOP_X       = CHAN_HW + RAIL_W + 5.0;    // |x| of the stop screws (side channels)
+STOP_SLEEVE  = [4.2, 10.0, 6.0];          // TPU sleeve [ID, OD, height]
+STOP_LUG     = [5.0, 6.0];                // lug on the slide's rear corners [x reach, u length]
+STOP_U_FRONT = -REAR_L + STOP_LUG[1] + STROKE + STOP_SLEEVE[1]/2;   // body u of front sleeve centres
+STOP_U_REAR  = -REAR_L - STOP_SLEEVE[1]/2;                          // body u of rear sleeve centres
+HOME_DETENT_HOLD = 3;             // N: a light detent keeps the drawer home
+// Rear + side U-seal: TPU blade 0.8 thick, 3.0 free length, 0.30 interference,
+// leaning 30 deg toward the throat, bulb in a dovetail groove in the ceiling.
+WIPER_BLADE = [0.8, 3.0, 0.30, 30];
+WIPER_GROOVE = [2.0, 2.9, 4.5];   // [mouth width, inner width, depth]
+WIPER_OFFSET = 2.5;               // groove centreline from the throat's rear/side edges
+JOIN_SCREWS = [[-PUCK_R+16, -28], [PUCK_R-16, -28], [-PUCK_R+16, 30], [PUCK_R-16, 30]];  // (legacy)
+DOCK_PINS = [[-PUCK_R+20, PILL_YC_REAR + 10], [PUCK_R-20, PILL_YC_REAR + 10]];
 DOCK_PIN_D = 6.0;
 
-// ---------- drawer front / dial --------------------------------------------------
-REVEAL_H  = 1.5;                  // gap puck face -> drawer front at rest
-U_PUCK_FRONT_S = PUCK_R + T_LEN/2;        // puck front, slide-local u at rest
-U_HANDLE0 = U_PUCK_FRONT_S + REVEAL_H;    // drawer front starts here (slide-local u)
-U_DIAL    = U_HANDLE0 + DIAL_D/2 + 2.5;   // dial/pinion axis (slide-local u)
+// ---------- agitator (rocker wand, recommended for whey, collagen, BCAA,
+//            pre-workouts, psyllium) --------------------------------------------------
+// A loop wand pivots on an axle through the funnel's +x wall and is driven by a
+// pin on the slide via a cam arm. It DWELLS while the chamber is filling or
+// being struck off (u in [0, T_LEN]) and swings ~45 deg only while the throat is
+// covered (u in [T_LEN, STROKE]).
+WAND_SIDE   = +1;                             // axle enters through the +x funnel wall
+WAND_AXLE_Z = zq(Z_CEIL_TOP + 12);            // axle height
+WAND_AXLE_Y = 0;                              // over the jar axis
+WAND_PIN    = [SLIDE_W/2, -REAR_L + 14, Z_FLOOR + 3];   // [x, slide-local u, z] M3 pin on the slide side
+WAND_SWING  = 45;
+
+// ---------- drawer front / locking dial --------------------------------------------
+REVEAL    = 1.0;                  // the one visible gap everywhere
+REVEAL_H  = REVEAL;
+// The drawer front's rear face is concave, radius PUCK_R + REVEAL, concentric
+// with the pill's front semicircle, so the gap to the body is uniform.
+U_PUCK_FRONT_S = T_LEN/2 - PILL_Y_FRONT;      // body front (x = 0), slide-local u at home
+U_HANDLE0 = U_PUCK_FRONT_S + REVEAL;          // drawer front starts here (slide-local u, x = 0)
+DIAL_D    = 36;                   // one dial on every head
+DIAL_H    = 13;
+U_DIAL    = U_HANDLE0 + DIAL_D/2 + 3.0;       // dial/pinion axis (slide-local u)
 RACK_FWD  = 1.6*PI*G_M;           // rack teeth beyond pinion axis at 0 mL
 U_ROD_FRONT0 = U_DIAL + RACK_FWD; // rod front end at 0 mL (slide-local u)
 HANDLE_L  = (U_ROD_FRONT0 + L_MAX + 3) - U_HANDLE0;
 HANDLE_W  = SLIDE_W + 6;
+// The slide is printed as TWO parts (bed fit): the slide body and the drawer
+// front, joined just inside the body face by a dovetail + 2 x M3 from below.
+SLIDE_SPLIT_U = U_HANDLE0 - 6;    // slide-local u of the joint plane
 Z_ROD   = Z_FLOOR + CH_H/2;       // rack/pinion mid-plane
-ROD_H   = min(8, CH_H - 8);       // rack rod height (z)
-RACK_BACK = 3.5;                  // rack body behind tooth roots
-ROD_X0  = G_CD - G_M*G_ADD;                       // rack tooth tips (face the pinion)
-ROD_X1  = G_CD + G_M*(G_ADD + G_CK) + RACK_BACK;  // back of the rack rod
-ROD_CL  = 0.35;                   // rod tunnel clearance per side
-X_RACK_PITCH = G_CD;              // rack pitch line at x = +G_CD (rack on pinion's right)
-PIN_FW  = ROD_H;                  // pinion face width
-DIAL_H  = 11;
-Z_DIAL_BOT = Z_SLIDE_TOP + 0.4;
-DIAL_SHAFT_D = 2*(G_RP - G_M*(G_ADD + G_CK)) - 1;   // shaft fits inside pinion root
-DIAL_KEY_AF  = DIAL_SHAFT_D - 2.4;   // hex key across flats at the shaft end (pinion slides on from below)
-PINION_BORE_CL = 0.15;               // hex bore clearance per side
-STOP_TAB_ANGLE = 330;             // dial hard-stop post sits in the unused 60 deg (angle CCW from +x, about the dial axis)
-// Dial seat in the drawer top (slide cuts it; the detent part lives in it):
-DIAL_WELL_D     = DIAL_D + 1.0;   // shallow round well under the dial
-DIAL_WELL_DEPTH = 2.2;
-DIAL_WELL_KEYS  = [90, 270];      // two anti-rotation key notches in the well wall (angles about the dial axis)
-DIAL_WELL_KEY   = [3.0, 1.5];     // [width, radial depth] of each key notch
-STOP_POST = [DIAL_D/2 - 3.5, 3.0, 2.0];   // [radius from dial axis, diameter, height above well floor] at STOP_TAB_ANGLE
-PINION_CAVITY_R = G_RP + G_M*G_ADD + 0.8;   // pinion cavity radius in the drawer front
-Z_HANDLE_TOP = Z_SLIDE_TOP;       // drawer front top is flush with the slide top
-HANDLE_Z0 = 0.8;                  // drawer front bottom clears the bay plate (z=0)
-NAME_PLATE = [HANDLE_W - 10, 12, 1.6];   // [w, h, t] recess on the drawer front face
+ROD_H   = 8;                      // rack face height
+RACK_BACK = 3.5;
+ROD_X0  = G_CD - G_M*G_ADD;
+ROD_X1  = G_CD + G_M*(G_ADD + G_CK) + RACK_BACK;
+ROD_CL  = 0.35;
+X_RACK_PITCH = G_CD;              // rack on the pinion's right (+x), teeth face -x
+// Locking dial: dial knob + Ø DIAL_SHAFT_D shaft + pinion are ONE part (the
+// pinion's tip circle fits inside the shaft, so it drops in from above).
+// A 48-tooth face crown under the dial meshes with the lock ring in the well:
+// 1.0 mm locking height, flanks 5 deg off axial (self-locking in PLA), 0.4 mm
+// lead-in chamfer. Lift LOCK_LIFT to turn. A TPU crush tube under the M3
+// retaining screw (from below) pulls the dial down: 3-5 N home, <= 8 N lifted.
+// Change the dose with the drawer PULLED OUT (chamber empty).
+LOCK_TOOTH_H = 1.0;  LOCK_FLANK = 5;  LOCK_CHAMFER = 0.4;  LOCK_LIFT = 1.6;
+LOCK_R = [12.0, 17.0];            // crown radial band under the dial
+CRUSH_TUBE = [8.0, 5.4, 6.0];     // TPU [OD, ID, length]
+DIAL_SHAFT_D = 15;
+PIN_FW  = ROD_H + LOCK_LIFT + 0.5;   // pinion face so the rack stays meshed when lifted
+DIAL_WELL_D     = DIAL_D + 1.2;
+DIAL_WELL_DEPTH = 2.0;
+DIAL_WELL_KEYS  = [90, 270];
+DIAL_WELL_KEY   = [3.0, 1.5];
+LOCK_RING_T     = DIAL_WELL_DEPTH;   // PLA lock ring fills the well, teeth on top
+STOP_TAB_ANGLE  = 330;            // dial hard-stop sits in the unused 60 deg (CCW from +x, dial axis)
+STOP_POST = [DIAL_D/2 - 4.0, 4.0, 4.0];   // [radius, dia, height >= LOCK_LIFT + 2]: stops work lifted too
+Z_DIAL_BOT = Z_SLIDE_TOP + 0.6;
+PINION_CAVITY_R = G_RP + G_M*G_ADD + 0.8;
+Z_HANDLE_TOP = Z_SLIDE_TOP;
+HANDLE_Z0 = 1.0;                  // drawer front bottom: 1 mm above the pedestal's top
+NAME_PLATE = [HANDLE_W - 10, 12, 1.6];
+CL_PLUNGER = 0.15;                // plunger in its slot (overrides style token for v5.1)
+PLUNGER_TONGUE = [1.6, 1.6];      // side tongues in slot-wall grooves; plunger hangs 0.2 mm off the floor
 
-// ---------- dial lock: set it and forget it ---------------------------------------
-// The dial LOCKS. DETENT_TEETH V-teeth under the dial mesh with a PLA lock ring
-// keyed into the dial well. Lift the dial LOCK_LIFT to turn it; a TPU spring
-// under the drawer front pulls it back down into the nearest of 40 positions.
-// The pinion stays axially captured in its cavity; the dial's hex key slides
-// through the pinion's hex bore when the dial is lifted.
-LOCK_LIFT    = 2.4;               // lift needed to clear the lock teeth
-LOCK_TOOTH_H = 1.2;               // V-tooth height (90 deg included angle)
-LOCK_RING_T  = 2.2;               // PLA lock ring thickness (sits in the dial well)
-
-// ---------- pedestal + dose drawer (each head sits on its own pedestal) ------------
-// Pull the dose handle and let go: one dose drops into the DOSE DRAWER inside the
-// pedestal. Slide the drawer out and pour it into your cup. Pedestals line up side
-// by side on a table, counter or cabinet shelf; nothing needs to fit under a head.
-PED_TOP_T   = 3.0;                // pedestal top plate: the head sits on it, z in [-PED_TOP_T, 0]
+// ---------- pedestal + dose drawer -------------------------------------------------
+// Pull the dose handle out to its stop: one dose drops into the DOSE DRAWER in
+// the pedestal. Push the handle home. Slide the dose drawer out and pour.
+PED_TOP_T   = 3.0;
 CUP_WALL    = 2.0;
 CUP_FLOOR_T = 2.0;
-CUP_IN_H    = 36;                 // dose drawer interior depth
-CUP_TOP_Z   = -PED_TOP_T - 1.0;   // drawer rim inside the pedestal (1 mm below the top plate)
+CUP_IN_H    = 36;
+CUP_TOP_Z   = -PED_TOP_T - 1.0;
 CUP_BOT_Z   = CUP_TOP_Z - CUP_IN_H - CUP_FLOOR_T;
 PED_FLOOR_T = 3.0;
-PED_H       = -CUP_BOT_Z + 0.6 + PED_FLOOR_T;   // pedestal height; its bottom is at z = -PED_H
-CUP_W       = HANDLE_W;           // drawer outer width: lines up under the dose handle
-CUP_Y_REAR  = hy(HOLE_U0) + 8;    // drawer rear end (head y): 8 mm past the drop hole
-CUP_Y_FRONT = -(PUCK_R + REVEAL_H + HANDLE_L);  // drawer front face lines up with the handle's front
-CUP_FRONT_TOP_Z = -1.0;           // drawer front block rises to just under the handle (reveal 1.8 mm)
-PED_HOLE    = [CH_W + 3, (HOLE_U1 - HOLE_U0) + 3];   // top-plate opening over the drawer (x, y), centred on the drop hole
+PED_H       = zq(-CUP_BOT_Z + 0.6 + PED_FLOOR_T);
+CUP_W       = HANDLE_W;
+CUP_Y_REAR  = hy(HOLE_U0) + 8;
+CUP_Y_FRONT = T_LEN/2 - (U_HANDLE0 + HANDLE_L);   // lines up with the handle's front at home
+CUP_FRONT_TOP_Z = -1.0;
+PED_HOLE    = [CH_W + 3, (HOLE_U1 - HOLE_U0) + 3];
 PED_HOLE_Y  = (hy(HOLE_U0) + hy(HOLE_U1))/2;
 FEET_T      = 2.5;
-PED_GAP     = 6;                  // gap between neighbouring pedestals in a row
-JOINER_Y    = 24;                 // joiner pockets on each side at head y = JOINER_Y
-ROW_PITCH   = PUCK_D + PED_GAP;   // centre-to-centre spacing when lined up
+PED_GAP     = 6;
+JOINER_Y    = (PILL_YC_FRONT + PILL_YC_REAR)/2;
+ROW_PITCH   = PUCK_D + PED_GAP;
 
 // (the dimension report echo lives in dosebar.scad so it prints once)

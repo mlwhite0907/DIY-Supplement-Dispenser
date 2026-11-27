@@ -47,9 +47,19 @@ Neck OD and mouth ID are **unmeasured estimates**. The chuck grips ±10 mm aroun
 
 - **Stir post:** a slim PLA rake that plugs into the slide's rear section. It rises through a slot behind the throat and a keyway in the funnel into the jar neck. It sweeps about 37 mm on every pull and every return to stop bridging and rat-holing of cohesive powders (whey, collagen, BCAA, pre-workout). It replaced the earlier pivoting "stir wand" idea.
 - **Return:** two TPU 95A bands. Routing: slide side hook → around a rear post (pulley) → front anchor, ≈+18 % strain. A hair tie or rubber band can loop hook ↔ rear post directly.
+- **v5.1 (after the design review):**
+  - Sealed transit: stroke ≈72 mm (std), land ≥ L_MAX + 5.
+  - Push-pull drawer with TPU-sleeved M4 stops and no springs.
+  - Stir post removed; an optional rocker wand replaces it.
+  - Pill-shaped body under the round chuck collar.
+  - Two-part slide: body + drawer front.
+  - One-piece locking dial: lift to turn, 5° crown, TPU crush-tube spring.
+  - Mirrored chuck: closes like a lid in the refill pose.
+  - Rigid jaws with TPU boots, gasket lip, 0.2 mm Z grid, bundled Inter fonts.
+  - See `cad/v5/README.md` "v5.1 OVERRIDES".
 - **Use (decided with the owner on 2026-11-27):**
   1. Set the locking dial once (lift, turn, release).
-  2. Pull the dose handle and let go. One dose drops into the **dose drawer** in the head's pedestal.
+  2. Pull the dose handle out to its stop: one dose drops into the **dose drawer** in the head's pedestal. Push the handle home again; that refills the chamber.
   3. Slide the drawer out and pour into a cup.
   - Heads live in a cabinet or lined up on a table, so nothing goes under a head. The old tall bar was removed.
 - **Pedestal:** a low round base per head (Ø = head) with dock pins, the dose-drawer bay and TPU feet. Optional joiners line up a row.

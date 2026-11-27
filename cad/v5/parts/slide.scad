@@ -245,3 +245,7 @@ module slide() { translate([0, SLIDE_Y0, 0]) slide_local(); }
 module slide_print() {
     translate([0, (SLIDE_U_FRONT - REAR_L)/2, -SLIDE_Z0]) slide_local();
 }
+
+// v5.1: drawer front printed separately (see params SLIDE_SPLIT_U)
+module drawer_front() {}
+module drawer_front_print() {}

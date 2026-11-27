@@ -14,6 +14,74 @@ cad/v5/
   tools/            build.py (STL export), fitcheck.py (interference), render/ (photo renders)
 ```
 
+## v5.1 OVERRIDES (read first; these win over anything below that conflicts)
+
+The design review found real problems and the owner gave new requirements. All the numbers are already in `params.scad`.
+
+**1. Sealed transit**
+- The land from the strike-off edge to the drop hole is now ≥ `L_MAX` + `LAND`, and `STROKE` = `T_LEN` + `L_MAX` + `LAND` + `OVERTRAVEL` (≈72 mm std, ≈79 mm pro).
+- The chamber is closed on top before any of it reaches the drop hole (`SEAL_WINDOW` ≥ 5).
+- `REAR_L` = `STROKE` + 6.
+- `T_LEN` ≥ 30 mm (S/M) / 40 mm (L) for flow.
+
+**2. Push-pull drawer, no springs**
+- Bands and stop pin are gone. Pull the handle out to its stop (the dose drops), then push it home.
+- **Stops:** two M4 screws from below wear TPU `stop_sleeve`s in the side channels (`STOP_X`, `STOP_U_FRONT`, `STOP_U_REAR`). A lug on each rear corner of the slide (`STOP_LUG`) stops on them at full pull and at home. Remove the front screws to take the slide out.
+- **Home detent:** about 3 N so the handle stays home.
+
+**3. Stir post is gone**
+- It can't work with a 72 mm stroke.
+- Replaced by the optional **rocker wand** (`wand` + `wand_arm`, DECK unit). It is driven by an M3 screw-head pin on the slide side at `WAND_PIN`.
+- It dwells while the throat is open (u ∈ [0, `T_LEN`]) and swings about `WAND_SWING` only while the throat is covered.
+
+**4. Pill footprint**
+- Base, deck lower skin and pedestal share `pill_2d()`: semicircles of `PUCK_R` at `PILL_YC_FRONT` and `PILL_YC_REAR`.
+- The round chuck collar (ring Ø `PUCK_D` = `RING_OD`) sits centred on the jar axis on top of the pill.
+
+**5. Slide in two parts:** `slide` (body) + `drawer_front` (handle with dial seat), joined at slide-local u = `SLIDE_SPLIT_U` by a dovetail + 2 × M3 from below.
+
+**6. Drawer front**
+- Its rear face is concave: radius `PUCK_R` + `REVEAL`, concentric with the pill's front semicircle, so the gap is uniform.
+- One visible gap everywhere: `REVEAL` = 1.0.
+
+**7. Locking dial (DRIVE)**
+- The dial knob, its Ø`DIAL_SHAFT_D` shaft and the pinion are ONE part. The pinion fits inside the shaft's outline and drops in from above.
+- A 48-tooth face crown (`LOCK_TOOTH_H` 1.0, flanks `LOCK_FLANK` = 5° off axial, `LOCK_CHAMFER` 0.4) meshes with the PLA `lock_ring` in the dial well. Lift `LOCK_LIFT` = 1.6 to turn.
+- **Spring:** a TPU `dial_spring` crush tube (`CRUSH_TUBE`) under the M3 retaining screw (from below, washer, captive nut or self-tap) pulls it down.
+- **Stops:** the dial stop (`STOP_POST`, ≥ 4 mm tall) works lifted or not. At 0 the plunger stays `DIAL_ZERO_GAP` off the rear wall; at max it stays ≥ 1 mm short.
+- Pinion face `PIN_FW` = rack face + lift + 0.5.
+- One dial Ø36 × 13 on every head. Numerals Inter Bold cap 4.0–4.4 via `txt_size(cap)`.
+- **Change the dose with the handle PULLED OUT** (chamber empty). Put a tiny "PULL TO SET" hint by the index.
+
+**8. Plunger**
+- Hangs on `PLUNGER_TONGUE` side tongues in slot-wall grooves (`CL_PLUNGER` 0.15/side). Bottom 0.2 mm above the slide's bottom plane.
+- Hollow 1.2 mm shell, 1.0 × 45° front-bottom chamfer.
+
+**9. Chuck (rigid self-locking fixture)**
+- Closing turns COUNTER-clockwise about +z in head coordinates (`CHUCK_CLOSE_DIR` +1, `RING_PHI` positive when closing). That is clockwise for the user in the refill pose, like a lid.
+- `TWIST` 110°. `GROOVE_W` 6.5 × `SCROLL_DEPTH` 5.0. `PIN_D` 6 D-section pins; jaws printed on their side with a T-foot under the guide plate (0.20 vertical / 0.15 per side).
+- `PAD_T` 1.2 TPU slip-on boots instead of soft pads. `RING_T` 14, ring play 0.4 axial / 0.3 radial.
+- Deboss "LOCK ↻ / OPEN ↺" (as seen in the refill pose) on the base bottom.
+
+**10. Gasket:** 1.2 mm flange in a `GASKET_POCKET` with a 0.3 mm undercut lip, plus a `GASKET_LIP` 0.8 × 3.0 mm sealing lip at 30° outward.
+
+**11. Seals**
+- Rear + both sides of the throat get one TPU U-seal blade (`WIPER_BLADE`), retained by a bulb in a dovetail `WIPER_GROOVE` (thicken the ceiling locally).
+- The strike-off (front) edge stays rigid and sharp: no bed chamfer on it.
+- Reliefs 0.6 mm, vented. Drop-hole edges get a 0.6 mm chamfer.
+
+**12. Z grid:** every Z datum and every part's height sits on the 0.2 mm layer grid. Use `zq()`; `CL_VT` = 0.20.
+
+**13. Text**
+- Use the bundled fonts (params `use`s `cad/v5/fonts/*.otf`) and `txt_size(cap)`: Inter cap = 1.0105 × size.
+- Ink 1.2 mm deep for ivory on charcoal, 0.6 for charcoal on ivory. Min stroke and tick width 0.8 mm.
+
+**14. No ironing** (print guide). Top surfaces use monotonic lines parallel to the pull.
+
+**15. Base ↔ deck:** a tool-free 3-lug bayonet is preferred (or 2 × M4×12 into captive nuts). No screws longer than 16 mm.
+
+**16. Pedestal + dose drawer:** pill footprint, `PED_H`. The dose drawer runs from `CUP_Y_REAR` to `CUP_Y_FRONT` under the (new, forward) drop hole.
+
 ## 1. Coordinates and datums
 
 - **Head coordinates** (assembled):

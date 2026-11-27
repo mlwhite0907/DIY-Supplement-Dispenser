@@ -13,14 +13,10 @@ include <parts/deck.scad>
 include <parts/slide.scad>
 include <parts/plunger.scad>
 include <parts/dial.scad>
-include <parts/pinion.scad>
 include <parts/lock_ring.scad>
 include <parts/dial_spring.scad>
-include <parts/pinion_cap.scad>
-include <parts/stir_post.scad>
-include <parts/stop_pin.scad>
 include <parts/wiper.scad>
-include <parts/band.scad>
+include <parts/wand.scad>
 include <parts/name_plate.scad>
 include <parts/ring.scad>
 include <parts/guide_plate.scad>
@@ -35,9 +31,11 @@ include <parts/coupon.scad>
 // dimension report
 echo(str("[dosebar] ", JAR_NAME, " class ", CLASS_NAME, " 0-", V_MAX, " mL @ ", ML_PER_CLICK,
     " mL/click | chamber ", CH_W, " x ", CH_H, " x ", L_MAX, " | throat ", T_WID, " x ", T_LEN,
-    " | stroke ", STROKE, " | puck D ", PUCK_D, " | rim z ", Z_RIM, " | handle L ", HANDLE_L,
-    " | slide L ", REAR_L + U_HANDLE0 + HANDLE_L, " | scroll lead ", SCROLL_LEAD, " / ", SCROLL_LEAD_ANGLE, " deg",
-    " | rear chamfer ", SLIDE_REAR_CHAMFER, " | band: direct +", round(100*BAND_STRAIN_ADD), "%, pulley path ", round(BAND_PATH_REST), " mm +", round(100*BAND_STRAIN_ADD_TPU), "%"));
+    " | stroke ", STROKE, " (seal window ", SEAL_WINDOW, ") | collar D ", PUCK_D, " | pill ", PUCK_D, " x ", PILL_LEN,
+    " (y ", PILL_Y_FRONT, "..", PILL_Y_REAR, ") | rim z ", Z_RIM, " | handle L ", HANDLE_L,
+    " | slide L ", REAR_L + U_HANDLE0 + HANDLE_L, " | pedestal H ", PED_H,
+    " | scroll lead ", SCROLL_LEAD, " / ", SCROLL_LEAD_ANGLE, " deg"));
+assert(SEAL_WINDOW >= 5, "sealed transit: chamber must be closed on top before it reaches the drop hole");
 
 PART = "assembly";
 ROW_N = 3;              // heads shown by PART="row"
@@ -47,19 +45,18 @@ SHOW_JAR = true;
 // Part registry: [name, material, qty per head (or per bay), color]
 PARTS = [
     ["base",        "PLA", 1, "body"],
+    ["stop_sleeve", "TPU", 4, "tpu"],
     ["deck",        "PLA", 1, "body"],
+    ["wiper",       "TPU", 1, "tpu"],
+    ["wand",        "PLA", 1, "accent"],
+    ["wand_arm",    "PLA", 1, "accent"],
     ["slide",       "PLA", 1, "body"],
+    ["drawer_front","PLA", 1, "body"],
     ["plunger",     "PLA", 1, "accent"],
     ["dial",        "PLA", 1, "accent"],
     ["dial_inlay",  "PLA", 1, "ink"],
-    ["pinion",      "PLA", 1, "accent"],
     ["lock_ring",   "PLA", 1, "accent"],
     ["dial_spring", "TPU", 1, "tpu"],
-    ["pinion_cap",  "PLA", 1, "body"],
-    ["stir_post",   "PLA", 1, "accent"],
-    ["stop_pin",    "PLA", 1, "accent"],
-    ["wiper",       "TPU", 1, "tpu"],
-    ["band",        "TPU", 2, "tpu"],
     ["name_plate",  "PLA", 1, "accent"],
     ["name_inlay",  "PLA", 1, "ink"],
     ["ring",        "PLA", 1, "accent"],
@@ -78,22 +75,18 @@ function _pcol(n) = _col(PARTS[search([n], PARTS)[0]][3]);
 
 module posed(name) {
     if      (name == "base")        base();
+    else if (name == "stop_sleeve") stop_sleeve();
     else if (name == "deck")        deck();
+    else if (name == "wiper")       wiper();
+    else if (name == "wand")        wand();
+    else if (name == "wand_arm")    wand_arm();
     else if (name == "slide")       slide();
+    else if (name == "drawer_front") drawer_front();
     else if (name == "plunger")     plunger();
     else if (name == "dial")        dial();
     else if (name == "dial_inlay")  dial_inlay();
-    else if (name == "pinion")      pinion();
     else if (name == "lock_ring")   lock_ring();
     else if (name == "dial_spring") dial_spring();
-    else if (name == "pinion_cap")  pinion_cap();
-    else if (name == "pedestal")    pedestal();
-    else if (name == "dose_drawer") dose_drawer();
-    else if (name == "foot")        foot();
-    else if (name == "stir_post")   stir_post();
-    else if (name == "stop_pin")    stop_pin();
-    else if (name == "wiper")       wiper();
-    else if (name == "band")        band();
     else if (name == "name_plate")  name_plate(NAME);
     else if (name == "name_inlay")  name_inlay(NAME);
     else if (name == "ring")        ring();
@@ -106,25 +99,26 @@ module posed(name) {
     else if (name == "jaw_pad0")    jaw_pad(0);
     else if (name == "jaw_pad1")    jaw_pad(1);
     else if (name == "jaw_pad2")    jaw_pad(2);
-    else if (name == "jar")         jar_ghost();
-    else if (name == "params_json") cube(0.01);
     else if (name == "gasket")      gasket();
+    else if (name == "pedestal")    pedestal();
+    else if (name == "dose_drawer") dose_drawer();
+    else if (name == "foot")        foot();
+    else if (name == "jar")         jar_ghost();
 }
 module printed(name) {
     if      (name == "base")        base_print();
+    else if (name == "stop_sleeve") stop_sleeve_print();
     else if (name == "deck")        deck_print();
+    else if (name == "wiper")       wiper_print();
+    else if (name == "wand")        wand_print();
+    else if (name == "wand_arm")    wand_arm_print();
     else if (name == "slide")       slide_print();
+    else if (name == "drawer_front") drawer_front_print();
     else if (name == "plunger")     plunger_print();
     else if (name == "dial")        dial_print();
     else if (name == "dial_inlay")  dial_inlay_print();
-    else if (name == "pinion")      pinion_print();
     else if (name == "lock_ring")   lock_ring_print();
     else if (name == "dial_spring") dial_spring_print();
-    else if (name == "pinion_cap")  pinion_cap_print();
-    else if (name == "stir_post")   stir_post_print();
-    else if (name == "stop_pin")    stop_pin_print();
-    else if (name == "wiper")       wiper_print();
-    else if (name == "band")        band_print();
     else if (name == "name_plate")  name_plate_print(NAME);
     else if (name == "name_inlay")  name_inlay_print(NAME);
     else if (name == "ring")        ring_print();

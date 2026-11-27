@@ -1,14 +1,25 @@
 # Dose Bar v5: design intent
 
-## How you use it
+## How you use it (v5.1)
 
-1. **Set the dial once.** Lift the dial ~2 mm, turn it to your mL, and let go. It drops into a lock, so bumping it or pulling the handle can't change it.
-2. **Pull the dose handle and let go.** That's the little drawer front the dial sits on: about 1½ in out, then it springs back. One pull measures one level dose. It falls into the **dose drawer** in the pedestal below.
+1. **Set the dial once.**
+   - Pull the dose handle out (that empties the measuring chamber), lift the dial ~1.6 mm, turn it to your mL and let go.
+   - It drops into a lock, so nothing can bump it off.
+   - Push the handle back in.
+2. **Every dose: pull the handle out to its stop.**
+   - It's a smooth ~2.8 in drawer pull, and one level dose drops into the **dose drawer** in the pedestal below.
+   - Push the handle back in; that refills the measuring chamber for next time.
 3. **Slide the dose drawer out and pour** it into your cup (it has a pour spout). Slide it back.
 
-Two pulls before pouring = a double dose. Heads sit on their own low pedestals and line up side by side on a table, counter or cabinet shelf. Nothing has to fit under a head.
+Two pulls before pouring = a double dose. Heads sit on their own low pedestals and line up side by side on a table, counter or cabinet shelf.
 
-> **Status:** draft 0. These are the design intent and starting numbers. A design-review pass will check them before CAD starts. Each number is marked as a target or as an assumption until the parametric model and the test prints confirm it.
+> **v5.1 note.** The design review changed four things:
+> - The drawer travels farther (≈72 mm), so a dose is always fully sealed off before it drops.
+> - It's push–pull instead of spring-return, so there's no slam, every grain falls, and there are fewer parts.
+> - The dial locks.
+> - The chuck turns like a jar lid in the refill position.
+>
+> The numbered sections below are the original draft-0 intent. `cad/v5/README.md` ("v5.1 OVERRIDES") is authoritative where they differ.
 
 ## 1. What it is
 

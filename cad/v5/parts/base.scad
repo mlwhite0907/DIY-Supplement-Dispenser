@@ -230,3 +230,7 @@ module base() {
 module base_print() {
     base();
 }
+
+// v5.1: TPU stop sleeves on M4 screws (see params STOP_*)
+module stop_sleeve() {}
+module stop_sleeve_print() {}

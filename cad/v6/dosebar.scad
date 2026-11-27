@@ -103,6 +103,7 @@ module printed(name) {
     else if (name == "shell")       shell_print();
     else if (name == "slide")       slide_print();
     else if (name == "plunger")     plunger_print();
+    else if (name == "limit_block") limit_block_print();
     else if (name == "dial")        dial_print();
     else if (name == "dial_inlay")  dial_inlay_print();
     else if (name == "pawl")        pawl_print();

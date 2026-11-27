@@ -35,6 +35,8 @@ module chassis() {
             translate([-(CH_W + 1)/2, hy(HOLE_U1), 1.4]) cube([CH_W + 1, HOLE_U1 - HOLE_U0, 0.01]);
             translate([-(CH_W + 4)/2, hy(HOLE_U1) - 1.5, -0.1]) cube([CH_W + 4, HOLE_U1 - HOLE_U0 + 3, 0.01]);
         }
+        // groove under the dial screw's path, so any M3 head type clears the floor
+        bx([-4.5, hy(U_FLOOR_FRONT) - 1, Z_FLOOR - 1.2], [4.5, hy(HOLE_U1) + 1, Z_FLOOR + 1]);
         // purge slots: powder that works its way behind the slide falls into the tub, not into the stroke
         for (s = [-1, 1]) bx([s*(BUMP[0]/2 + 3.4), hy(-REAR_L) + 0.6, -1], [s*SLIDE_W/2, Y_BOX_REAR - 0.3, FLOOR_T + 0.6]);
     }

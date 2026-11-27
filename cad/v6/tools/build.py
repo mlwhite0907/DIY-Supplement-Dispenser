@@ -18,6 +18,7 @@ EXTRA = [('mat', 'TPU', 1, 'tpu')] if False else []
 def main():
     ap = argparse.ArgumentParser(); ap.add_argument('--preset', default='std'); ap.add_argument('--class', dest='cls', default=None)
     ap.add_argument('--names', default='WHEY'); ap.add_argument('--out', default=None)
+    ap.add_argument('--limit', type=float, default=None, help='also export a limit block that caps the dial at this many mL')
     a = ap.parse_args()
     defs = preset_defs(a.preset, a.cls)
     cls = a.cls or next(d.split('=')[1].strip('"') for d in defs if d.startswith('DOSE_CLASS='))
@@ -26,6 +27,7 @@ def main():
     jobs = [(n, m, q, [], n) for n, m, q, c in parts]
     jobs += [('latch_soft', 'TPU', 0, [], 'latch_soft'), ('latch_firm', 'TPU', 0, [], 'latch_firm'),
              ('coupon', 'PLA', 0, [], 'coupon'), ('coupon_tpu', 'TPU', 0, [], 'coupon_tpu')]      # qty 0 = optional / test pieces
+    if a.limit: jobs += [('limit_block', 'PLA', 0, [f'LIMIT_ML={a.limit}'], f'limit_block_{a.limit:g}mL')]
     for nm in [x.strip() for x in a.names.split(',') if x.strip()]:
         jobs += [('name_plate', 'PLA', 1, [f'NAME="{nm}"'], f'name_plate_{nm}'), ('name_inlay', 'PLA', 1, [f'NAME="{nm}"'], f'name_inlay_{nm}')]
     def one(j):

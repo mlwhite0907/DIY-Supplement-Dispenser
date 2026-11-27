@@ -1,5 +1,14 @@
 # DIY Supplement Dispenser
 
+> **Current design: Dose Bar v6** — a fully manual, 3D-printed dispenser for your own jars (PLA + TPU, no electronics).
+> One pull of the scoop drawer gives one measured dose. Start here: **[docs/v6/README.md](docs/v6/README.md)** ·
+> [Print guide](docs/v6/PRINT_GUIDE.md) · [Assembly](docs/v6/ASSEMBLY.md) · [Use and calibrate](docs/v6/USE_AND_CALIBRATE.md) ·
+> [Handoff](docs/v6/HANDOFF.md) · STLs in [`stl/v6/`](stl/v6/)
+>
+> ![Dose Bar v6](docs/v6/img/row.png)
+>
+> Everything below this box describes the earlier electronic concept (v0.2) and is kept for reference.
+
 **DIY home machine for dosing supplement powders into a cup** — closed-loop load cell for powder, **open-loop timed water** from a refillable tank, then a short settle delay. Built as a **hybrid project**: buy electronics / pumps / motors; **3D-print** hoppers, frames, and mounts.
 
 Phase 1 is a **bench prototype**, not a polished vending appliance. Simulation works today; first physical builds need current **v0.2** print geometry and calibrated hardware. A drink in the cup is a **goal after calibration and testing**, not a guaranteed out-of-box product claim.

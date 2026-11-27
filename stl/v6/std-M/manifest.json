@@ -49,8 +49,8 @@
     205.8,
     26.6
    ],
-   "solid_cm3": 113.4,
-   "solid_g": 140.7,
+   "solid_cm3": 113.3,
+   "solid_g": 140.5,
    "fits_256": true
   },
   {
@@ -401,6 +401,20 @@
    ],
    "solid_cm3": 0.8,
    "solid_g": 1.0,
+   "fits_256": true
+  },
+  {
+   "part": "limit_block_20mL",
+   "material": "PLA",
+   "qty": 0,
+   "watertight": true,
+   "size_mm": [
+    55.7,
+    15.3,
+    9.8
+   ],
+   "solid_cm3": 7.9,
+   "solid_g": 9.8,
    "fits_256": true
   },
   {

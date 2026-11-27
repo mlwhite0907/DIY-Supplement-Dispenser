@@ -20,7 +20,7 @@ All previews are rendered from `cad/appearance.scad`, rather than imagined produ
 
 ## Approximate size
 
-- Countertop footprint: 314 mm diameter (12.4 inches).
+- Countertop footprint: approximately 325 mm across protruding wheels (12.8 inches); base diameter 314 mm.
 - Two-tier exterior: about 356 mm high (14.0 inches), including top handle.
 - Single-tier exterior: about 198 mm high (7.8 inches).
 - Cartridge shell: 118 mm body height, plus 6 mm foot and approximately 10 mm lid/thumb pad.
@@ -31,12 +31,15 @@ All previews are rendered from `cad/appearance.scad`, rather than imagined produ
 
 Open `cad/appearance.scad` in OpenSCAD. `part="assembly"` is the complete two-tier view. Choose `single`, `separated`, `cartridge`, or a component name to inspect it. Set `removed=true` for the illustrated removal view; `exploded=true` separates the lid and wheel. These are illustration controls, not validated motion paths.
 
+The colored [carousel-12.glb](exports/carousel-12.glb) contains named components for orbiting in a compatible 3D viewer; its tiny text labels are omitted.
+
 The `exports/` folder contains STL component envelopes for independent viewing or non-food fit exploration. Do not print the complete carousel as a single fused model. Source dimensions are millimeters. Each appearance component is checked against a 256 mm bounding envelope; this alone does not establish printer suitability, orientation, supports or tolerances.
 
-On a Linux build host with OpenSCAD, Xvfb and a Python environment with trimesh/numpy:
+On a Linux build host with OpenSCAD, Xvfb and a Python environment with trimesh/numpy/scipy:
 
 ```sh
 python3 concepts/codex-countertop-carousel/prototype-v01/scripts/build.py
+python3 concepts/codex-countertop-carousel/prototype-v01/scripts/export_glb.py
 ```
 
 The build exports nine components and six views and checks the meshes for a single closed, consistently oriented solid with positive volume. See `validation/mesh-report.json` for results and source/output hashes. No changes to the existing dispenser control software are required or made.

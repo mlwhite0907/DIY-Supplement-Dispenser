@@ -85,20 +85,20 @@ module tier(){
 }
 module base_sector(){linear_extrude(14)sector2(157,25,89.8);}
 module base(){color(black){for(i=[0:3])rotate(i*90)base_sector();cylinder(d=85,h=14);}}
-module assembly(){
+module assembly(levels=tiers){
     base();
-    for(k=[0:tiers-1]){
+    for(k=[0:levels-1]){
         color(black)translate([0,0,14+k*tier_gap])support();
         translate([0,0,14+k*tier_gap])tier();
     }
-    color(silver)translate([0,0,14+(tiers-1)*tier_gap+150])handle();
+    color(silver)translate([0,0,14+(levels-1)*tier_gap+150])handle();
 }
 module separated(){
     translate([-190,0,0]){base();translate([0,0,14])tier();color(silver)translate([0,0,164])handle();}
     translate([190,0,0]){base();translate([0,0,14])tier();color(silver)translate([0,0,164])handle();}
 }
 if(part=="assembly")assembly();
-else if(part=="single")let(tiers=1)assembly();
+else if(part=="single")assembly(1);
 else if(part=="separated")separated();
 else if(part=="cartridge")cartridge();
 else if(part=="body")body();

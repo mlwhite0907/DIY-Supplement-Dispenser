@@ -13,7 +13,8 @@ Options:
   --quick        reduced matrix: (pull, dial, chuck) = (0,0,0) (0,V,1) (1,0,1) (1,V,0) (0.5,V/2,1)
   --parts a,b    only these parts (plus the jar); default: every part in posed()
   --no-jar       leave the jar ghost out
-  --no-bar       skip the dock check (head parts vs one bay of the bar, cup space)
+  --no-drop      skip the drop-path check (drop hole -> pedestal opening -> dose drawer)
+  --no-row       skip the row check (two heads ROW_PITCH apart + joiners)
   --tol MM3      interference tolerance for non-allowlisted pairs (default 0.5)
   --gap MM       report clearances below this (min_gap search length, default 0.6; 0 = off)
   --allow a:b=V  extra allowlist entry (repeatable)
@@ -37,8 +38,10 @@ What it does:
      interference > --tol mm3 is a failure.
   5. Skin check: the slide must stay inside a cylinder of radius PUCK_R from z = 0
      to Z_RING_TOP, except where it passes out through the front drawer opening.
-     Dock check (once the bar exists): every head part, placed on bay 0, against
-     bar_assembly(1) without its heads, and a 90 mm x SHAKER_H cup under the drop hole.
+     Drop path: a column the size of the drop hole (inset 1 mm), from the floor down
+     to the dose drawer's inner floor, must be clear of every part, so a dose falls
+     through the base, the pedestal opening and into the drawer.
+     Row: two heads ROW_PITCH apart (plus the joiners of row_assembly) must not touch.
   6. Prints a table, writes build/fit/<preset>/report.json and FITCHECK.md.
 
 Exit code: 0 = clean, 1 = unexpected interference / allowance exceeded / skin
@@ -71,20 +74,28 @@ ALLOWLIST = [
      "gear mesh with the rack (tiny: polygonal tooth tips)"),
     ("dial", "pinion", lambda P: 4.0,
      "hex key in the pinion bore"),
-    ("detent", "dial", lambda P: 25.0,
-     "TPU detent preload on the dial notches"),
     ("gasket", "guide_plate", lambda P: 0.3 * math.pi * (P["GASKET_OD"] + P["GASKET_ID"]) * (P["GASKET_T"] - P["GASKET_PROUD"]),
      "TPU gasket pressed into its pocket"),
     # Not in the original brief: the gasket's half-round sealing bead stands above Z_RIM and is
     # meant to be squashed by the jar rim. Bound: a 0.9 mm2 section around the mean rim circle.
     ("gasket", "jar", lambda P: 0.9 * math.pi * (P["GASKET_OD"] + P["GASKET_ID"]) / 2,
      "sealing bead squashed by the jar rim (gasket.scad)"),
+    # The brief's "detent vs dial (preload)" became the locking dial: PLA lock ring + TPU dial spring.
+    ("lock_ring", "dial", lambda P: 6.0,
+     "dial V-teeth seated in the lock ring (touching)"),
+    ("dial_spring", "pinion_cap", lambda P: 40.0,
+     "TPU dial spring preload (6-10 N) against the pinion cap"),
+    ("dial_spring", "dial", lambda P: 40.0,
+     "TPU dial spring preload on the dial shaft end"),
+    ("dose_drawer", "pedestal", lambda P: 6.0,
+     "soft PLA snap bump that holds the dose drawer in"),
 ]
 PARAMS_NEEDED = ["V_MAX", "PUCK_R", "SKIN_T", "Z_RING_TOP", "CHAN_HW", "HANDLE_W", "T_WID", "JAW_W", "JAW_H",
-                 "GASKET_OD", "GASKET_ID", "GASKET_T", "GASKET_PROUD", "STROKE", "CLASS_NAME"]
+                 "GASKET_OD", "GASKET_ID", "GASKET_T", "GASKET_PROUD", "STROKE", "CLASS_NAME",
+                 "CH_W", "HOLE_R", "Z_FLOOR", "hy(HOLE_U0)", "hy(HOLE_U1)"]
+# optional (pedestal era); missing names just disable the checks that need them
+PARAMS_OPTIONAL = ["CUP_BOT_Z", "CUP_FLOOR_T", "CUP_TOP_Z", "ROW_PITCH"]
 SKIN_PARTS = ["slide"]
-# Head origin on bay 0 in bar coordinates (docs/v5/BUILD_BRIEFS.md, BAR): (i*BAY_W, BAY_Y_HEAD, BAR_H).
-BAY_ORIGIN0 = "[0, is_undef(BAY_Y_HEAD) ? 0 : BAY_Y_HEAD, BAR_H]"
 
 
 def pair_key(a, b):
@@ -161,7 +172,8 @@ def main(argv=None):
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--parts", default="")
     ap.add_argument("--no-jar", action="store_true")
-    ap.add_argument("--no-bar", action="store_true")
+    ap.add_argument("--no-drop", action="store_true")
+    ap.add_argument("--no-row", action="store_true")
     ap.add_argument("--tol", type=float, default=0.5)
     ap.add_argument("--gap", type=float, default=0.6)
     ap.add_argument("--allow", action="append", default=[])
@@ -177,6 +189,8 @@ def main(argv=None):
     t0 = time.time()
     cache = C.PosedCache(args.preset, jobs=args.jobs, timeout=args.timeout, force=args.force)
     P = C.eval_scad(PARAMS_NEEDED, cache.base_defs, cache.dir / "_scad")
+    opt = C.eval_scad([f"is_undef({k}) ? undef : {k}" for k in PARAMS_OPTIONAL], cache.base_defs, cache.dir / "_scad")
+    P.update({k: opt[f"is_undef({k}) ? undef : {k}"] for k in PARAMS_OPTIONAL})
     V = float(P["V_MAX"])
     states = matrix(V, args.quick)
     parts = cache.head_parts
@@ -294,34 +308,66 @@ def main(argv=None):
                     skin.append({**skin_memo[sa], "state": st})
     C.write_json_atomic(pairs_file, pcache, indent=None)
 
-    # --------------------------------------------------------------- dock check: a head on a bay
-    dock = []
-    if not args.no_bar:
-        rb = cache.export_bar(1, "all")
-        gb = meshes.get(rb["sha"], rb["path"]) if rb["status"] == "ok" else None
-        if rb["status"] == "ok" and gb is None:
-            unreadable["bar"] = meshes.bad.get(rb["sha"])
-        if gb is not None:
-            ex = [BAY_ORIGIN0, "SHAKER_H", "hy((HOLE_U0 + HOLE_U1)/2)"]
-            o = C.eval_scad(ex, cache.base_defs + ["BAR_BAYS=1"], cache.dir / "_scad")
-            org, shaker, hole_y = o[ex[0]], float(o[ex[1]]), float(o[ex[2]])
-            dstates = [st for st in states if st["CHUCK_CLOSE"] == 1 and st["STATE_PULL"] in (0, 1)] or states[:1]
-            worst = {}
-            for st in dstates:
-                for p in live:
-                    r = res.get((p, C.state_key(st)))
-                    g = meshes.get(r["sha"], r["path"]) if r and r.get("status") == "ok" else None
-                    if g is None:
-                        continue
-                    v = max(0.0, (gb[0] ^ g[0].translate(list(map(float, org)))).volume())
-                    if v > worst.get(p, (-1, None))[0]:
-                        worst[p] = (v, st)
-            for p, (v, st) in sorted(worst.items(), key=lambda t: -t[1][0]):
-                dock.append({"what": f"bar x {p}", "mm3": round(v, 3), "state": st, "ok": v <= args.tol})
-            cup = m3.Manifold.cylinder(shaker, 45.0, 45.0, 128, False).translate([float(org[0]), float(org[1]) + hole_y, 0.0])
-            v = max(0.0, (gb[0] ^ cup).volume())
-            dock.append({"what": f"cup space (90 x {shaker:.0f} mm under the drop hole) x bar", "mm3": round(v, 3),
-                         "state": None, "ok": v <= args.tol})
+    # --------------------------------------------------------------- drop path: hole -> dose drawer
+    # A column the size of the drop hole (inset 1 mm) from the floor down to just above the
+    # dose drawer's inner floor must be free of every part: base hole, pedestal opening and
+    # drawer cavity line up, so the dose really lands in the drawer.
+    drop = []
+    if not args.no_drop:
+        y0, y1 = sorted((float(P["hy(HOLE_U0)"]), float(P["hy(HOLE_U1)"])))
+        w, l = float(P["CH_W"]) - 2.0, (y1 - y0) - 2.0
+        r = max(0.5, float(P["HOLE_R"]) - 1.0)
+        zb = (float(P["CUP_BOT_Z"]) + float(P["CUP_FLOOR_T"]) + 1.0) if P.get("CUP_BOT_Z") is not None else -1.0
+        zt = float(P["Z_FLOOR"]) - 0.05
+        cs = m3.CrossSection.square([w, l], True).offset(-r, m3.JoinType.Miter).offset(r, m3.JoinType.Round, 2.0, 48)
+        col = m3.Manifold.extrude(cs, zt - zb).translate([0.0, (y0 + y1) / 2, zb])
+        worst = {}
+        for st in [s_ for s_ in states if s_["STATE_PULL"] in (0, 1)] or states:
+            for p in live:
+                r_ = res.get((p, C.state_key(st)))
+                g = meshes.get(r_["sha"], r_["path"]) if r_ and r_.get("status") == "ok" else None
+                if g is None:
+                    continue
+                v = max(0.0, (col ^ g[0]).volume())
+                if v > worst.get(p, (-1.0, None))[0]:
+                    worst[p] = (v, st)
+        for p, (v, st) in sorted(worst.items(), key=lambda t: -t[1][0]):
+            drop.append({"what": p, "mm3": round(v, 3), "state": st, "ok": v <= args.tol})
+        drop_info = f"{w:.0f} x {l:.0f} mm column, z {zb:.1f} .. {zt:.1f}"
+
+    # --------------------------------------------------------------- row: two heads side by side
+    row = []
+    if not args.no_row and P.get("ROW_PITCH") is not None:
+        rr = cache.export_row(2)
+        gj = meshes.get(rr["sha"], rr["path"]) if rr["status"] == "ok" else None
+        pitch = float(P["ROW_PITCH"])
+        st = next((s_ for s_ in states if s_["STATE_PULL"] == 0 and s_["CHUCK_CLOSE"] == 1), states[0])
+        heads = []
+        for p in live:
+            r_ = res.get((p, C.state_key(st)))
+            g = meshes.get(r_["sha"], r_["path"]) if r_ and r_.get("status") == "ok" else None
+            if g is not None:
+                heads.append((p, g))
+        if jar is not None:
+            g = meshes.get(jar["sha"], jar["path"])
+            if g is not None:
+                heads.append(("jar", g))
+        for pa, ga in heads:                       # head 0 against head 1 (one pitch to the right)
+            for pb, gb in heads:
+                b2 = [[gb[1][0][0] + pitch, gb[1][0][1], gb[1][0][2]], [gb[1][1][0] + pitch, gb[1][1][1], gb[1][1][2]]]
+                if not boxes_overlap(ga[1], b2, 0.01):
+                    continue
+                v = max(0.0, (ga[0] ^ gb[0].translate([pitch, 0.0, 0.0])).volume())
+                if v > 1e-3:
+                    row.append({"what": f"head0.{pa} x head1.{pb}", "mm3": round(v, 3), "ok": v <= args.tol})
+        if gj is not None:
+            for p, g in heads:
+                for k in (0, 1):
+                    v = max(0.0, (gj[0] ^ g[0].translate([k * pitch, 0.0, 0.0])).volume())
+                    if v > 1e-3:
+                        row.append({"what": f"joiner x head{k}.{p}", "mm3": round(v, 3), "ok": v <= args.tol})
+        row_info = (f"pitch {pitch:.1f} mm, joiners {'present' if gj is not None else 'not implemented'}, "
+                    f"{len(heads)} parts per head")
 
     # --------------------------------------------------------------- verdicts
     rows, fails = [], []
@@ -351,7 +397,8 @@ def main(argv=None):
             rows.append({"pair": pk, "max_mm3": None, "state": None, "limit": lim, "allow_why": why, "gap_min": None,
                          "gap_state": None, "verdict": "not checked (part missing)", "per_state": {}})
     skin_fail = [s for s in skin if s["outside_mm3"] > args.tol]
-    dock_fail = [d for d in dock if not d["ok"]]
+    drop_fail = [d for d in drop if not d["ok"]]
+    row_fail = [d for d in row if not d["ok"]]
 
     def fs(st):
         return C.fmt_state(st) if st else "-"
@@ -375,16 +422,19 @@ def main(argv=None):
               f" (puck R {P['PUCK_R']:.1f}, skin inner R {skin[0]['skin_inner_r']:.1f})")
     elif "slide" in parts:
         C.say("\nskin: slide not available (stub), skipped")
-    if dock:
-        C.say("\ndock (one bay, head at the bay origin; cup space under the drop hole):")
-        for d in dock:
-            if d["mm3"] > 1e-3 or not d["ok"] or d["what"].startswith("cup"):
-                C.say(f"  {d['what']:<58} {d['mm3']:>9.2f} mm3  {'OK' if d['ok'] else 'FAIL'}"
-                      + (f"  ({fs(d['state'])})" if d["state"] and d["mm3"] > 1e-3 else ""))
-        if all(d["mm3"] <= 1e-3 for d in dock if not d["what"].startswith("cup")):
-            C.say(f"  bar x head parts: no contact ({len(dock) - 1} parts checked)")
-    elif not args.no_bar:
-        C.say("\ndock: bar parts not available yet, skipped")
+    if not args.no_drop:
+        C.say(f"\ndrop path (drop hole -> dose drawer; {drop_info}):")
+        blocked = [d for d in drop if d["mm3"] > 1e-3]
+        for d in blocked:
+            C.say(f"  blocked by {d['what']:<14} {d['mm3']:>9.2f} mm3  {'OK (< tol)' if d['ok'] else 'FAIL'}  ({fs(d['state'])})")
+        if not blocked:
+            C.say(f"  clear ({len(drop)} parts checked)")
+    if row or (not args.no_row and P.get("ROW_PITCH") is not None):
+        C.say(f"\nrow (two heads side by side; {row_info}):")
+        for d in row:
+            C.say(f"  {d['what']:<40} {d['mm3']:>9.2f} mm3  {'OK (< tol)' if d['ok'] else 'FAIL'}")
+        if not row:
+            C.say("  no contact between neighbouring heads or joiners")
     if stubs:
         C.say(f"\nskipped (not implemented): {', '.join(stubs)}")
     if unreadable:
@@ -394,7 +444,7 @@ def main(argv=None):
     for p, e in errored.items():
         C.say(f"export error {p}: {'; '.join(e or [])[:300]}")
     status = 0
-    if fails or skin_fail or dock_fail or unreadable or errored:
+    if fails or skin_fail or drop_fail or row_fail or unreadable or errored:
         status = 1
     n_pairs = len(findings)
     C.say(f"\n[fitcheck] {cache.preset}: {len(live)} parts{' + jar' if jar else ''}, {len(states)} states, "
@@ -402,7 +452,8 @@ def main(argv=None):
     C.say(f"RESULT: {'PASS' if status == 0 else 'FAIL'}"
           + (f"  ({len(fails)} interference failure(s))" if fails else "")
           + (f"  (skin violations in {len(skin_fail)} state(s))" if skin_fail else "")
-          + (f"  ({len(dock_fail)} dock/cup failure(s))" if dock_fail else "")
+          + (f"  (drop path blocked by {', '.join(d['what'] for d in drop_fail)})" if drop_fail else "")
+          + (f"  ({len(row_fail)} row collision(s))" if row_fail else "")
           + (f"  ({len(unreadable)} unreadable mesh(es))" if unreadable else "")
           + (f"  ({len(errored)} export error(s))" if errored else ""))
 
@@ -412,7 +463,7 @@ def main(argv=None):
         "deps": {p: deps.get(p) for p in parts}, "jar": bool(jar),
         "allowlist": {f"{a}|{b}": {"max_mm3": round(v[0], 2), "why": v[1]} for (a, b), v in allow.items()},
         "pairs": [{**r, "pair": list(r["pair"])} for r in rows], "fails": [list(r["pair"]) for r in fails],
-        "skin": skin, "dock": dock, "result": "PASS" if status == 0 else "FAIL",
+        "skin": skin, "drop_path": drop, "row": row, "result": "PASS" if status == 0 else "FAIL",
     }
     C.write_json_atomic(cache.dir / "report.json", report)
     md = [f"# Fit check: preset `{cache.preset}`", "",
@@ -429,9 +480,13 @@ def main(argv=None):
         md += ["", f"Skin: slide outside the puck (drawer opening excluded): max {worst['outside_mm3']:.2f} mm³ "
                    f"({fs(worst['state'])}); max radius behind the front {max(s['r_max'] for s in skin):.1f} mm "
                    f"(puck R {P['PUCK_R']:.1f}, skin inner {skin[0]['skin_inner_r']:.1f})."]
-    if dock:
-        md += ["", "Dock check (one bay, head at the bay origin):", ""]
-        md += [f"- {d['what']}: {d['mm3']:.2f} mm³ {'OK' if d['ok'] else '**FAIL**'}" for d in dock]
+    if drop:
+        bl = [d for d in drop if d["mm3"] > 1e-3]
+        md += ["", "Drop path (drop hole to dose drawer): " + ("clear." if not bl else
+               "; ".join(f"blocked by {d['what']} {d['mm3']:.2f} mm³{'' if d['ok'] else ' **FAIL**'}" for d in bl))]
+    if row:
+        md += ["", "Row (two heads side by side):", ""] + [
+            f"- {d['what']}: {d['mm3']:.2f} mm³ {'OK' if d['ok'] else '**FAIL**'}" for d in row]
     if stubs:
         md += ["", f"Skipped (not implemented): {', '.join(stubs)}."]
     (cache.dir / "FITCHECK.md").write_text("\n".join(md) + "\n")

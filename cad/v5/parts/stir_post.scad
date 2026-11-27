@@ -28,22 +28,29 @@ STIR_YR    = hy(POST_U0) + STIR_T/2;
 STIR_BAR_L = min(T_WID/2 - 4,
     stir_fx(STIR_ZC - STIR_BAR_H/2 - STIR_CLR, STIR_YR + STIR_CLR) - STIR_CLR - 1);  // half length
 
-// Short side tines rise from the crossbar ends (a trident / rake): they plow the
-// funnel side walls where powder hangs up.
-STIR_SIDE_X   = STIR_BAR_L - STIR_TINE_W/2;
-STIR_SIDE_TOP = STIR_ZC + 14;
-STIR_SIDES    = STIR_SIDE_X - STIR_TINE_W >= 2*STIR_FILLET + 1;   // small funnels: plain T
+// Rake head: a U-shaped fork (tuning-fork form) whose bottom sits at STIR_ZC and
+// whose arms rise along the funnel's side walls, where powder hangs up; the
+// central tine continues up into the jar. All bars STIR_TINE_W, all ends round.
+STIR_U_R    = STIR_BAR_L - STIR_TINE_W/2;               // U centreline radius
+STIR_U_ZC   = STIR_ZC + STIR_U_R;                       // U centre height
+STIR_U_TOP  = STIR_U_ZC + 8;                            // fork arm tops
+STIR_FIL    = min(STIR_FILLET, (STIR_U_R - STIR_TINE_W - 0.6)/2);   // junction fillets (keep the slots open)
+module stir_round_bar(x, z0, z1, w=STIR_TINE_W) {
+    translate([x - w/2, z0]) square([w, z1 - w/2 - z0]);
+    translate([x, z1 - w/2]) circle(d=w, $fn=40);
+}
 module stir_post_2d() {   // in (x, z) of head coordinates
-    offset(r=-STIR_FILLET) offset(delta=STIR_FILLET) union() {
-        translate([-STIR_W/2, STIR_Z0]) square([STIR_W, STIR_ZC - STIR_Z0]);
-        hull() for (s=[-1, 1]) translate([s*(STIR_BAR_L - STIR_BAR_H/2), STIR_ZC])
-            circle(d=STIR_BAR_H, $fn=40);
-        if (STIR_SIDES) for (s=[-1, 1]) translate([s*STIR_SIDE_X, 0]) {
-            translate([-STIR_TINE_W/2, STIR_ZC]) square([STIR_TINE_W, STIR_SIDE_TOP - STIR_TINE_W/2 - STIR_ZC]);
-            translate([0, STIR_SIDE_TOP - STIR_TINE_W/2]) circle(d=STIR_TINE_W, $fn=40);
+    offset(r=-STIR_FIL) offset(delta=STIR_FIL) union() {
+        translate([-STIR_W/2, STIR_Z0]) square([STIR_W, STIR_ZC + 1 - STIR_Z0]);
+        translate([0, STIR_U_ZC]) intersection() {
+            difference() {
+                circle(r=STIR_U_R + STIR_TINE_W/2, $fn=96);
+                circle(r=STIR_U_R - STIR_TINE_W/2, $fn=96);
+            }
+            translate([-50, -50]) square([100, 50]);
         }
-        translate([-STIR_TINE_W/2, STIR_ZC]) square([STIR_TINE_W, STIR_TINE_TOP - STIR_TINE_W/2 - STIR_ZC]);
-        translate([0, STIR_TINE_TOP - STIR_TINE_W/2]) circle(d=STIR_TINE_W, $fn=40);
+        for (s=[-1, 1]) stir_round_bar(s*STIR_U_R, STIR_U_ZC - EPS, STIR_U_TOP);
+        stir_round_bar(0, STIR_ZC, STIR_TINE_TOP);
     }
 }
 module stir_octa(c) {

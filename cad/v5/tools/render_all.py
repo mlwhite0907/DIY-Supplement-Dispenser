@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Dose Bar v5: product-photo renders of the head, the dial and the bar.
+"""Dose Bar v5: product-photo renders of the head, the dial and a row of heads.
 
 Usage:
   python3 cad/v5/tools/render_all.py                    # every scene in tools/render/scenes/
@@ -17,7 +17,7 @@ Options:
 
 Pipeline:
   1. Each scene (tools/render/scenes/<name>.json) lists heads (preset, state, name
-     text, jar, powder fill, explode offsets), optionally a bar, and a camera.
+     text, jar, powder fill, explode offsets), optionally a row (joiners), and a camera.
   2. Every part in the PARTS registry is exported in its ASSEMBLED pose
      (-D 'PART="posed:<part>"', cached in build/fit/<preset>/ and shared with
      fitcheck.py). Stub parts are skipped, so a scene renders whatever exists.
@@ -32,13 +32,14 @@ Colors follow the PARTS color roles in dosebar.scad (body / accent / ink / tpu).
 Ink is drawn in the contrast color of the part it is inlaid in, so dial numerals
 and name text stay readable even when the ink role shares the parent's color.
 
-Scene file keys (all optional except heads or bar):
+Scene file keys (all optional except heads):
   title, width, height, samples, look {render.html keys: exposure, key, dome, ...}
-  heads: [{preset, state {STATE_PULL, DIAL_ML, CHUCK_CLOSE}, name, at [x,y,z] | "bay:<i>",
+  heads: [{preset, state {STATE_PULL, DIAL_ML, CHUCK_CLOSE}, name, at [x,y,z] | "row:<i>",
            jar (bool), powder (0..1 fill or false), only [...], hide [...],
            explode {part: dz | [dx,dy,dz]}, explode_scale k, explode_jar dz}]
   layout: "row" (heads without "at" are placed side by side, gap in mm: layout_gap)
-  bar: {preset, bays, state}, bay_origin: OpenSCAD expression of i (default below)
+  row: {preset, n}: add the joiners of row_assembly(n); row_origin: OpenSCAD expression of i
+       for "row:<i>" placement (default [i*ROW_PITCH, 0, 0])
   camera: {dir, fov, fill, tags, shift} (see render.html)
 """
 from __future__ import annotations
@@ -60,9 +61,9 @@ SCENES = C.RENDER_DIR / "scenes"
 ASSETS = C.RENDER_DIR / "assets"
 OUT = C.V5 / "renders"
 DRAFT_OUT = C.BUILD / "renders_draft"
-# Bar coordinates (docs/v5/BUILD_BRIEFS.md, BAR): bay i is centred at x = i*BAY_W, the plate top is
-# at z = BAR_H and the head origin sits at (i*BAY_W, BAY_Y_HEAD, BAR_H).
-DEFAULT_BAY_ORIGIN = "[i*BAY_W, is_undef(BAY_Y_HEAD) ? 0 : BAY_Y_HEAD, BAR_H]"
+# Heads in a row (docs/v5/BUILD_BRIEFS.md, PEDESTAL): head i at x = i*ROW_PITCH, each on its own
+# pedestal (part of the head assembly); row_assembly() adds the joiners between them.
+ROW_ORIGIN = "[i*ROW_PITCH, 0, 0]"
 
 # Studio look shared by every scene (a scene's "look" overrides keys).
 LOOK = {
@@ -183,19 +184,17 @@ class Scenes:
         look = deep_merge(LOOK, sc.get("look"))
         parts, missing = [], set()
         heads = sc.get("heads") or []
-        # placement: explicit "at", "bay:<i>", or side by side ("row")
-        bar = sc.get("bar")
-        bar_cache = None
-        if bar:
-            bar_cache = self.cache(bar.get("preset", "std"), None)
+        # placement: explicit "at", "row:<i>" (ROW_PITCH apart), or side by side by size ("layout": "row")
+        row = sc.get("row")
+        row_cache = self.cache(row.get("preset", "std"), None) if row else None
         x_cursor = None
         for h in heads:
             at = h.get("at")
-            if isinstance(at, str) and at.startswith("bay:"):
+            if isinstance(at, str) and at.startswith("row:"):
                 i = int(at.split(":")[1])
-                expr = re.sub(r"\bi\b", f"({i})", sc.get("bay_origin", DEFAULT_BAY_ORIGIN))
-                defs = (bar_cache or self.cache(h.get("preset", "std"), h.get("name"))).base_defs + [f"BAR_BAYS={int((bar or {}).get('bays', 3))}"]
-                at = C.eval_scad([expr], defs, C.BUILD / ".scad")[expr]
+                expr = re.sub(r"\bi\b", f"({i})", sc.get("row_origin", ROW_ORIGIN))
+                c = row_cache or self.cache(h.get("preset", "std"), h.get("name"))
+                at = C.eval_scad([expr], c.base_defs, c.dir / "_scad")[expr]
             if at is None and sc.get("layout") == "row":
                 c = self.cache(h.get("preset", "std"), h.get("name"))
                 pr = C.eval_scad(["max(PUCK_R, BODY_OD/2)"], c.base_defs, c.dir / "_scad")["max(PUCK_R, BODY_OD/2)"]
@@ -209,19 +208,13 @@ class Scenes:
             p, miss, _, _ = self.head(h, at)
             parts += p
             missing |= set(miss)
-        if bar:
-            n = int(bar.get("bays", 3))
-            body, feet = bar_cache.export_bar(n, "body"), bar_cache.export_bar(n, "foot")
-            if feet["status"] != "ok":            # feet only reachable through another module: one mesh
-                body, feet = bar_cache.export_bar(n, "all"), None
-            if body["status"] == "ok":
-                parts.append({"file": asset_for(body["path"], body["sha"]), "color": self.colors.get("body", "#ECE8DF"),
-                              **MATERIAL["body"], "tag": "bar", "pos": [0, 0, 0]})
-                if feet:
-                    parts.append({"file": asset_for(feet["path"], feet["sha"]), "color": self.colors.get("tpu", "#3A3D42"),
-                                  **MATERIAL["tpu"], "tag": "foot", "pos": [0, 0, 0]})
+        if row:                                   # joiners between the heads (row_assembly without heads)
+            r = row_cache.export_row(int(row.get("n", len(heads) or 3)))
+            if r["status"] == "ok":
+                parts.append({"file": asset_for(r["path"], r["sha"]), "color": self.colors.get(self.roles.get("joiner", "body"), "#ECE8DF"),
+                              **MATERIAL.get(self.roles.get("joiner", "body"), {}), "tag": "joiner", "pos": [0, 0, 0]})
             else:
-                missing.add("bar_assembly")
+                missing.add("joiner")
         scene = {**look, "width": sc.get("width", 1600), "height": sc.get("height", 1200),
                  "samples": sc.get("samples", 64), "parts": parts, "camera": sc.get("camera", {})}
         if self.args.draft:

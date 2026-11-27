@@ -5,13 +5,14 @@
   {"preset": "std", "name": "WHEY", "state": {"STATE_PULL": 0, "DIAL_ML": 20, "CHUCK_CLOSE": 1}, "jar": true, "powder": 0.62,
    "explode_scale": 1.45,
    "explode": {
-     "stop_pin": -85, "base": -45, "pinion": -22, "band": -10,
-     "slide": 0, "plunger": 0, "name_plate": 0, "name_inlay": 0, "detent": 14,
+     "foot": -110, "pedestal": -95, "dose_drawer": [0, -40, -95],
+     "stop_pin": -85, "base": -45, "pinion_cap": -38, "dial_spring": -30, "pinion": -22, "band": -10,
+     "slide": 0, "plunger": 0, "name_plate": 0, "name_inlay": 0, "lock_ring": 16,
      "wiper": 28, "dial": 30, "dial_inlay": 30, "deck": 42, "stir_post": 72,
      "ring": 78, "guide_plate": 108, "gasket": 122, "jaw": 135, "jaw_pad": 135
    },
    "explode_jar": 175}
  ],
- "camera": {"dir": [-0.75, -1.25, 0.72], "fov": 24, "fill": 0.86},
+ "camera": {"dir": [-0.75, -1.25, 0.72], "fov": 24, "fill": 0.88},
  "look": {"ground": {"shadow": 0.4}}
 }

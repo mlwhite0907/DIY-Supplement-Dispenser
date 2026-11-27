@@ -28,8 +28,10 @@ BASE_FRONT_POST = [BAND_X_OUT, Y_BAND_FRONT];
 BASE_FRONT_POST_D = 6;
 BASE_COL_OD   = 10;                       // join-screw column
 BASE_CB       = [6.5, 3.5];               // screw head counterbore [d, depth] from the bottom
+// Join screw: M3 x (Z_CEIL - 3.5 + ~11) socket head, i.e. M3x35 (std/template), M3x45 (pro);
+// it threads ~11 mm into the deck's 12 mm pilots.
 BASE_DOCK_DEPTH = 3;
-BASE_DOCK_BOSS  = DOCK_PIN_D + CL_PIN + 4.4;
+BASE_DOCK_BOSS  = DOCK_PIN_D + CL_PIN + 3.2;   // 1.6 wall around the dock hole
 BASE_RIB_T    = 2.0;
 BASE_TXT      = 5;                        // Inter Medium 5 mm
 BASE_TXT_D    = 0.6;

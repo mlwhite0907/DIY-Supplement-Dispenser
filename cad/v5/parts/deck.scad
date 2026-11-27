@@ -137,7 +137,33 @@ module deck_holes() {
     for (a = GP_SCREW_ANGLES) translate([GP_SCREW_R*cos(a), GP_SCREW_R*sin(a), Z_GP_BOT - DECK_GP_PILOT_DEPTH])
         cylinder(d=M3_PILOT, h=DECK_GP_PILOT_DEPTH + EPS, $fn=24);
 }
+// Drawer mouth: the base cuts the opening (channel + 0.5 all round) up to the
+// joint; the deck cuts the top 0.5 of it through its skin, with the same 0.5
+// chamfers on the outer edges, so the mouth shows a uniform 0.8 shadow gap above
+// the slide. Its 0.5 roof is a 2.4 mm overhang off the inner 1 mm land ring.
+DECK_MOUTH_HW = CHAN_HW + 0.5;
+DECK_MOUTH_Z1 = Z_CEIL + 0.5;
+DECK_MOUTH_C  = 0.5;
+module deck_mouth() {
+    w = DECK_MOUTH_HW; z1 = DECK_MOUTH_Z1; c = DECK_MOUTH_C; R = PUCK_R;
+    ys = -sqrt(R*R - w*w);
+    intersection() {
+        translate([-w, -R - 2, Z_CEIL - 1]) cube([2*w, R, z1 - Z_CEIL + 1]);
+        difference() {
+            translate([0, 0, Z_CEIL - 1]) cylinder(r=R + 1, h=z1 - Z_CEIL + 1, $fn=240);
+            translate([0, 0, Z_CEIL - 2]) cylinder(r=DECK_R_IN - 0.01, h=z1 - Z_CEIL + 3, $fn=240);
+        }
+    }
+    intersection() {   // chamfer along the curved top edge
+        translate([-w, -R - 2, Z_CEIL]) cube([2*w, R, z1 + c + 2 - Z_CEIL]);
+        rotate_extrude($fn=240) polygon([[R - c, z1 - EPS], [R + 1, z1 - EPS], [R + 1, z1 + c + 1], [R, z1 + c]]);
+    }
+    t = [-ys/R, w/R];   // tangent along the skin, toward +x
+    for (m=[0, 1]) mirror([m, 0, 0]) translate([0, 0, Z_CEIL - 1]) linear_extrude(z1 + c + 1 - Z_CEIL)
+        polygon([[w - EPS, ys + c], [w, ys] + c*t + [w, ys]/R*0.6, [w - EPS, ys - 2]]);
+}
 module deck_underside_cuts() {
+    deck_mouth();
     translate([0, 0, Z_CEIL - EPS]) linear_extrude(DECK_WG_D + EPS) deck_wg_2d();
     translate([0, 0, Z_CEIL - EPS]) linear_extrude(DECK_RELIEF + EPS) deck_relief_2d();
 }

@@ -313,11 +313,22 @@ def _sha(*chunks) -> str:
 
 
 def file_sha(path) -> str:
+    """sha1 of a file; "missing" if it vanished (part files get rewritten while tools run)."""
     h = hashlib.sha1()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
+    try:
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+    except FileNotFoundError:
+        return "missing"
     return h.hexdigest()
+
+
+def read_text_safe(path) -> str:
+    try:
+        return Path(path).read_text()
+    except (FileNotFoundError, UnicodeDecodeError):
+        return ""
 
 
 _IDENT = re.compile(r"[A-Za-z_]\w*")
@@ -358,7 +369,7 @@ class SourceIndex:
         self.files = sorted(PARTS_DIR.glob("*.scad"))
         self.defs, self.uses, self.incl, self.modules, self.text = {}, {}, {}, set(), {}
         for f in self.files:
-            raw = f.read_text()
+            raw = read_text_safe(f)
             t = strip_scad_comments(raw)
             t_nostr = re.sub(r'"(?:\\.|[^"\\])*"', '""', t)
             self.text[f] = t_nostr
@@ -405,7 +416,7 @@ class SourceIndex:
             return self._taint_cache
         graph = {}
         for f in [PARAMS, *sorted(LIB.glob("*.scad")), ENTRY, *self.files]:
-            t = _STR.sub('""', strip_scad_comments(f.read_text()))
+            t = _STR.sub('""', strip_scad_comments(read_text_safe(f)))
             for stmt in top_level_statements(t):
                 m = re.match(r"^([A-Za-z_]\w*)\s*=\s*(.*)$", stmt, re.S)
                 if m:
@@ -720,20 +731,11 @@ translate([0, 0, Z_RIM + 0.3]) intersection() {{
 """
         return self.export_wrapper(f"powder_{int(round(fill * 100))}", body)
 
-    def export_bar(self, bays=3, group="all"):
-        """bar_assembly(bays) WITHOUT the heads it docks: head_assembly() is overridden to
-        nothing, so the heads can be added part by part in their own colors.
-          group="all"   every bar part (plates, legs, trims, feet)
-          group="body"  everything but the feet (all PLA body color)
-          group="foot"  only the TPU feet (every other module bar_assembly calls is overridden)
-        """
-        over = {"head_assembly"}
-        if group == "body":
-            over |= {"foot"}
-        elif group == "foot":
-            over |= set(self.src.calls_in("bar_assembly")) - {"foot"}
-        body = "\n".join(f"module {m}() {{}}" for m in sorted(over)) + f"\nbar_assembly({int(bays)});"
-        return self.export_wrapper(f"bar{int(bays)}_{group}", body, [f"BAR_BAYS={int(bays)}"])
+    def export_row(self, n=2):
+        """row_assembly(n) WITHOUT its heads (head_assembly() is overridden to nothing):
+        whatever the row adds between heads, i.e. the joiners."""
+        body = f"module head_assembly() {{}}\nrow_assembly({int(n)});"
+        return self.export_wrapper(f"row{int(n)}_extras", body, [f"ROW_N={int(n)}"])
 
 
 def fmt_state(st) -> str:

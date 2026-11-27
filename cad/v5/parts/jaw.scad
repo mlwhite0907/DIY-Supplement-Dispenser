@@ -75,9 +75,13 @@ module _jaw_block() {
         translate([0,0,C_TOP]) linear_extrude(EPS) _jaw_plan_convex(0);
         translate([0,0,JAW_H - JAW_RT]) linear_extrude(EPS)
             _jaw_plan_convex(0, JAW_DRAFT*(JAW_H - JAW_RT)/JAW_H);
-        for (k=[1:n]) let(a = 90*k/n, z = JAW_H - JAW_RT + JAW_RT*sin(a))
-            translate([0,0,z - (k==n ? EPS : 0)])
+        // soft edge: arc to 45 deg, then a 45 deg chamfer to the top face, so
+        // in print pose (top on the bed) no overhang exceeds 45 deg
+        for (k=[1:n]) let(a = 45*k/n, z = JAW_H - JAW_RT + JAW_RT*sin(a))
+            translate([0,0,z])
                 linear_extrude(EPS) _jaw_plan_convex(JAW_RT*(1 - cos(a)), JAW_DRAFT*z/JAW_H);
+        translate([0,0,JAW_H - EPS]) linear_extrude(EPS)
+            _jaw_plan_convex(JAW_RT*(1 - cos(45)) + JAW_RT*(1 - sin(45)), JAW_DRAFT);
     }
 }
 module _jaw_body() {

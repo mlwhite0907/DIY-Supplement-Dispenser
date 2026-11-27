@@ -1,0 +1,9 @@
+{
+ "title": "Drawer pulled, dial at 25 mL, 3/4 front-right",
+ "width": 1600, "height": 1200, "samples": 72,
+ "heads": [
+  {"preset": "std", "name": "WHEY", "state": {"STATE_PULL": 1, "DIAL_ML": 25, "CHUCK_CLOSE": 1}, "jar": true, "powder": 0.55}
+ ],
+ "camera": {"dir": [0.85, -1.2, 0.5], "fov": 24, "fill": 0.8},
+ "look": {"key": {"dir": [-0.45, 0.8, 0.6]}}
+}

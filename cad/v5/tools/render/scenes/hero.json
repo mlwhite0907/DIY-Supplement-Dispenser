@@ -1,0 +1,8 @@
+{
+ "title": "Hero: one std head with its jar, 3/4 front-left",
+ "width": 1600, "height": 1200, "samples": 72,
+ "heads": [
+  {"preset": "std", "name": "WHEY", "state": {"STATE_PULL": 0, "DIAL_ML": 20, "CHUCK_CLOSE": 1}, "jar": true, "powder": 0.62}
+ ],
+ "camera": {"dir": [-0.72, -1.25, 0.6], "fov": 24, "fill": 0.8, "shift": [0, -0.02]}
+}

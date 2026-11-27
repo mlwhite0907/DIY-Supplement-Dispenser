@@ -1,0 +1,10 @@
+{
+ "title": "Pro head (protein jar, class L) next to a std head",
+ "width": 1800, "height": 1200, "samples": 64,
+ "layout": "row", "layout_gap": 45,
+ "heads": [
+  {"preset": "std", "name": "BCAA", "state": {"DIAL_ML": 12}, "powder": 0.6},
+  {"preset": "pro", "name": "PROTEIN", "state": {"DIAL_ML": 60}, "powder": 0.7}
+ ],
+ "camera": {"dir": [-0.5, -1.3, 0.5], "fov": 24, "fill": 0.84}
+}

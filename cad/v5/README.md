@@ -54,7 +54,7 @@ cad/v5/
 | Group | Files |
 |---|---|
 | BODY | `parts/base.scad`, `parts/deck.scad`, `parts/stir_post.scad`, `parts/stop_pin.scad`, `parts/wiper.scad` |
-| DRAWER | `parts/slide.scad`, `parts/plunger.scad`, `parts/dial.scad`, `parts/detent.scad`, `parts/band.scad`, `parts/name_plate.scad` |
+| DRAWER | `parts/slide.scad`, `parts/plunger.scad`, `parts/dial.scad`, `parts/pinion.scad`, `parts/detent.scad`, `parts/band.scad`, `parts/name_plate.scad` |
 | CHUCK | `parts/ring.scad`, `parts/guide_plate.scad`, `parts/jaw.scad`, `parts/jaw_pad.scad`, `parts/gasket.scad` |
 | BAR | `parts/bay.scad`, `parts/leg.scad`, `parts/foot.scad` |
 | TOOLS | `tools/*` (not part geometry) |
@@ -101,7 +101,9 @@ cad/v5/
 
 **Base ↔ slide**
 - Floor top `Z_FLOOR`.
-- Slide side guidance by **rails** only: floor rails and ceiling rails, each `RAIL_H` tall × `RAIL_W` wide, inner faces at x = ±`CHAN_HW`. The middle of the slide's sides is free; that's where the band hooks ride.
+- Slide side guidance: **channel walls in the base**, `RAIL_W` thick, inner faces at x = ±`CHAN_HW`, full height `Z_FLOOR`..`Z_CEIL`.
+- Each wall has a horizontal **hook slot** `HOOK_SLOT_H` tall centred on `Z_ROD`, long enough for the band hook's whole travel (rest → full pull, ±4 mm).
+- The deck ceiling is flat: no rails hang from it, since they wouldn't print.
 - Drop hole: `HOLE_U0`/`HOLE_U1`/`HOLE_R`, width `CH_W`.
 - Stop pin: Ø `STOP_D`, pushed up through the floor at body u = `U_STOP`, x = 0. It rides in the slide-underside groove spanning slide-local u ∈ `STOP_GROOVE`, 4 mm deep, width `STOP_D`+0.6. The groove ends ARE the rest and full-pull stops.
 - Channel rear wall at head y = `Y_REAR_WALL`.
@@ -116,7 +118,6 @@ cad/v5/
 - Throat `T_WID` × `T_LEN` with a **sharp, rigid strike-off edge** at its front.
 - Post slot behind it.
 - **TPU wiper** in a 2 × 2 mm groove in the ceiling underside, 1.0 mm behind the throat's rear edge, following the throat rear edge and the post slot outline (the slide top moves rearward under it on return).
-- Ceiling rails as above.
 - Contact only on lands: relieve the rest of the ceiling 0.4 mm where the slide never needs sealing.
 
 **Base ↔ deck**
@@ -143,7 +144,8 @@ cad/v5/
 - Slot: `CH_W` × full height, slide-local u ∈ [0, `SLOT_L`].
 - Bulkhead `BULK_T`.
 - Rack rod: x ∈ [`ROD_X0`, `ROD_X1`], z = `Z_ROD` ± `ROD_H`/2; teeth face −x toward the pinion at x = 0.
-- Pinion: m `G_M`, z `G_Z`, PA `G_PA`, addendum `G_ADD`, on the dial axis at slide-local u = `U_DIAL`, face width `PIN_FW`.
+- Pinion (separate part `pinion`): m `G_M`, z `G_Z`, PA `G_PA`, addendum `G_ADD`, on the dial axis at slide-local u = `U_DIAL`, face width `PIN_FW`.
+  - It slides onto the dial shaft's hex key (`DIAL_KEY_AF` across flats, `PINION_BORE_CL`) from below and is clamped by an M3 screw into the shaft end.
 - Rod front end at slide-local u = `U_ROD_FRONT0` + `CH_L`.
 - Detent: `DETENT_TEETH` notches, 40 used. Hard stop tab at `STOP_TAB_ANGLE`, so the gears and the plunger are never the stop.
 - Drawer front: starts at slide-local u = `U_HANDLE0`, length `HANDLE_L`, width `HANDLE_W`, z ∈ [`HANDLE_Z0`, `Z_HANDLE_TOP`].

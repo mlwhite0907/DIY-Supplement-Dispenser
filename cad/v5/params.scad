@@ -149,7 +149,9 @@ DOVETAIL = [8, 11, 3];            // [top width, bottom width, depth] of the jaw
 
 // ---------- base / deck joint, rails, bands, stops --------------------------------
 CHAN_HW = SLIDE_W/2 + CL_SLIDE;   // channel half width (slide guided by rails)
-RAIL_H  = 4.0;  RAIL_W = 3.0;     // floor rails + ceiling rails guide the slide sides
+RAIL_W  = 3.0;                    // channel side wall thickness (walls run full height Z_FLOOR..Z_CEIL)
+RAIL_H  = 4.0;                    // (legacy name) min guided height above/below the hook slot
+HOOK_SLOT_H = 7.0;                // horizontal slot in each channel wall for the band hook (centred Z_ROD)
 Y_REAR_WALL = hy(-REAR_L) + 1.0;  // channel rear wall (1 mm behind slide at rest)
 // Slide rear corners are chamfered so the slide always fits inside the puck.
 _rear_y = hy(-REAR_L);                         // slide rear end at rest (head y)
@@ -198,6 +200,8 @@ PIN_FW  = ROD_H;                  // pinion face width
 DIAL_H  = 11;
 Z_DIAL_BOT = Z_SLIDE_TOP + 0.4;
 DIAL_SHAFT_D = 2*(G_RP - G_M*(G_ADD + G_CK)) - 1;   // shaft fits inside pinion root
+DIAL_KEY_AF  = DIAL_SHAFT_D - 2.4;   // hex key across flats at the shaft end (pinion slides on from below)
+PINION_BORE_CL = 0.15;               // hex bore clearance per side
 STOP_TAB_ANGLE = 330;             // dial hard-stop post sits in the unused 60 deg
 Z_HANDLE_TOP = Z_SLIDE_TOP;       // drawer front top is flush with the slide top
 HANDLE_Z0 = 0.8;                  // drawer front bottom clears the bay plate (z=0)

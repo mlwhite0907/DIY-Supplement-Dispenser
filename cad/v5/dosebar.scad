@@ -13,6 +13,7 @@ include <parts/deck.scad>
 include <parts/slide.scad>
 include <parts/plunger.scad>
 include <parts/dial.scad>
+include <parts/pinion.scad>
 include <parts/detent.scad>
 include <parts/stir_post.scad>
 include <parts/stop_pin.scad>
@@ -27,6 +28,7 @@ include <parts/gasket.scad>
 include <parts/bay.scad>
 include <parts/leg.scad>
 include <parts/foot.scad>
+include <parts/coupon.scad>
 
 // dimension report
 echo(str("[dosebar] ", JAR_NAME, " class ", CLASS_NAME, " 0-", V_MAX, " mL @ ", ML_PER_CLICK,
@@ -48,6 +50,7 @@ PARTS = [
     ["plunger",     "PLA", 1, "accent"],
     ["dial",        "PLA", 1, "accent"],
     ["dial_inlay",  "PLA", 1, "ink"],
+    ["pinion",      "PLA", 1, "accent"],
     ["detent",      "TPU", 1, "tpu"],
     ["stir_post",   "PLA", 1, "accent"],
     ["stop_pin",    "PLA", 1, "accent"],
@@ -75,6 +78,7 @@ module posed(name) {
     else if (name == "plunger")     plunger();
     else if (name == "dial")        dial();
     else if (name == "dial_inlay")  dial_inlay();
+    else if (name == "pinion")      pinion();
     else if (name == "detent")      detent();
     else if (name == "stir_post")   stir_post();
     else if (name == "stop_pin")    stop_pin();
@@ -95,6 +99,7 @@ module printed(name) {
     else if (name == "plunger")     plunger_print();
     else if (name == "dial")        dial_print();
     else if (name == "dial_inlay")  dial_inlay_print();
+    else if (name == "pinion")      pinion_print();
     else if (name == "detent")      detent_print();
     else if (name == "stir_post")   stir_post_print();
     else if (name == "stop_pin")    stop_pin_print();
@@ -110,6 +115,9 @@ module printed(name) {
     else if (name == "bay_plate")   bay_plate_print();
     else if (name == "leg")         leg_print();
     else if (name == "foot")        foot_print();
+    else if (name == "coupon")      coupon_print();
+    else if (name == "coupon_parts") coupon_parts_print();
+    else if (name == "coupon_inlay") coupon_inlay_print();
 }
 // Simple jar ghost: neck + shoulder + body, upside down on the rim.
 module jar_ghost() {

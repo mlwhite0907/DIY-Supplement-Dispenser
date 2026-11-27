@@ -58,8 +58,8 @@ PARTS = [
     ["stop_boot",   "TPU", 2, "tpu"],
     ["bumper",      "TPU", 1, "tpu"],
     ["pawl_spring", "TPU", 1, "tpu"],
-    ["latch",       "TPU", 1, "tpu"],
-    ["sole",        "TPU", 1, "tpu"],
+    ["latch",       "TPU", 2, "tpu"],
+    ["mat",         "TPU", 1, "tpu"],
 ];
 COLORS = [["body", "#ECE8DF"], ["accent", "#2F3237"], ["ink", "#ECE8DF"], ["tpu", "#3A3D42"]];
 function _col(k) = COLORS[search([k], COLORS)[0]][1];
@@ -90,7 +90,7 @@ module posed(name) {
     else if (name == "bumper")      bumper();
     else if (name == "pawl_spring") pawl_spring();
     else if (name == "latch")       latch();
-    else if (name == "sole")        sole();
+    else if (name == "mat")         mat();
     else if (name == "jar")         jar_ghost();
 }
 module printed(name) {
@@ -118,7 +118,6 @@ module printed(name) {
     else if (name == "bumper")      bumper_print();
     else if (name == "pawl_spring") pawl_spring_print();
     else if (name == "latch")       latch_print();
-    else if (name == "sole")        sole_print();
     else if (name == "mat")         mat_print();
     else if (name == "joiner")      joiner_print();
     else if (name == "coupon")      coupon_print();

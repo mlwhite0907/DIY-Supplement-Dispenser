@@ -15,9 +15,11 @@ module slide_body() {
                 ubx(U_FB, U_FACE - 0.6, -HANDLE_W/2, HANDLE_W/2, Z_FACE0, Z_FACE1);
                 ubx(U_FB, U_FACE, -HANDLE_W/2 + 0.6, HANDLE_W/2 - 0.6, Z_FACE0 + 0.6, Z_FACE1 - 0.6);
             }
-            // dog: the scoop pulls it (through the TPU latch) and pushes it (front wall)
-            ubx(U_DOG1 - DOG[1], U_DOG1, -DOG[0]/2, DOG[0]/2, Z_FACE0 - DOG[2], Z_FLOOR + 1);
-            ubx(U_DOG1 - 0.5, U_FB + 0.5, -DOG[0]/2, DOG[0]/2, Z_FACE0, Z_FLOOR + 1);
+            // two dogs under the face block: the scoop pulls them (TPU latch flaps) and pushes them (front wall)
+            for (sg = [-1, 1]) hull() {
+                ubx(U_DOG1 - DOG[2], U_DOG1, min(sg*DOG[0], sg*DOG[1]), max(sg*DOG[0], sg*DOG[1]), Z_FACE0 - DOG[3] + 1, Z_FACE0 + 1);
+                ubx(U_DOG1 - DOG[2] + 1, U_DOG1, min(sg*DOG[0], sg*DOG[1]), max(sg*DOG[0], sg*DOG[1]), Z_FACE0 - DOG[3], Z_FACE0 + 1);
+            }
             // stop lugs (they start on the bed in the print; 45-degree lead underneath)
             for (s = [-1, 1]) hull() {
                 ubx(LUG_U0, LUG_U0 + LUG[1], min(s*(SLIDE_W/2 - 1), s*(SLIDE_W/2 + LUG[0])), max(s*(SLIDE_W/2 - 1), s*(SLIDE_W/2 + LUG[0])), Z_LUG0, Z_SLIDE_TOP);
@@ -46,7 +48,7 @@ module slide_body() {
             // pawl + spring pocket (open at the top), front-left of the dial
             rotate(PAWL_ANG) {
                 translate([WELL_D/2 - 1, -(PAWL[1] + 0.3)/2, PAWL_POCKET_Z]) cube([PAWL[0] + 1.2, PAWL[1] + 0.3, 10]);
-                translate([WELL_D/2 + PAWL[0] - NOTCH_DEPTH + PAWL_TUBE[0]/2 - 0.4, 0, PAWL_POCKET_Z]) cylinder(d=PAWL_TUBE[0] + 0.3, h=10);
+                translate([PAWL_SPRING_R, 0, PAWL_POCKET_Z]) cylinder(d=PAWL_TUBE[0] + 0.1, h=10);
             }
             // index mark in front of the well
             translate([0, -WELL_D/2 - 0.9, Z_SLIDE_TOP - 0.4]) linear_extrude(1) polygon([[0, 0], [-1.6, -2.8], [1.6, -2.8]]);
@@ -59,8 +61,14 @@ module slide_body() {
             ubx(NOTCH_U0, NOTCH_U1, SLIDE_W/2 - NOTCH_DEPTH_X, SLIDE_W/2 + 1, NOTCH_Z[0], NOTCH_Z[1]);
             ubx(NOTCH_U0, NOTCH_U1, SLIDE_W/2, SLIDE_W/2 + 1, NOTCH_Z[0] - NOTCH_DEPTH_X, NOTCH_Z[1]);
         }
+        // home catch: the bumper's TPU tube snaps into this slot (blind at the top: the sealing face stays whole)
+        ubx(-REAR_L - 1, -REAR_L + HOME_GRIP[2], -HOME_GRIP[1]/2, HOME_GRIP[1]/2, Z_FLOOR - 1, Z_FLOOR + HOME_GRIP[3]);
+        hull() {                                         // lead-in
+            ubx(-REAR_L - 1, -REAR_L + 0.01, -HOME_GRIP[1]/2 - 1.2, HOME_GRIP[1]/2 + 1.2, Z_FLOOR - 1, Z_FLOOR + HOME_GRIP[3]);
+            ubx(-REAR_L - 1, -REAR_L + 1.2, -HOME_GRIP[1]/2, HOME_GRIP[1]/2, Z_FLOOR - 1, Z_FLOOR + HOME_GRIP[3]);
+        }
         // underside relief behind the chamber: less rubbing area, lands all round
-        ubx(-REAR_L + 6, -7, -SLIDE_W/2 + 6, SLIDE_W/2 - 6, Z_FLOOR - 1, Z_FLOOR + 0.6);
+        for (s = [-1, 1]) ubx(-REAR_L + 6, -7, min(s*8, s*(SLIDE_W/2 - 6)), max(s*8, s*(SLIDE_W/2 - 6)), Z_FLOOR - 1, Z_FLOOR + 0.6);
     }
 }
 module slide() { translate([0, SLIDE_Y0, 0]) slide_body(); }

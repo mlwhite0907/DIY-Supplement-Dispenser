@@ -44,8 +44,8 @@ module dial_inlay_print() { translate([0, 0, Z_DIAL_TOP]) rotate([180, 0, 0]) di
 // PAWL — clicks on the rim. PLA, with a TPU tube behind it as the spring.
 module pawl_body() {   // nose at +x = 0, body extends to -x... built pointing at the dial axis from +x
     translate([0, 0, PAWL_POCKET_Z + 0.2]) linear_extrude(PAWL[2]) polygon([
-        [-NOTCH_DEPTH, 0], [0.5, -1.3], [0.5, -PAWL[1]/2], [PAWL[0] - NOTCH_DEPTH, -PAWL[1]/2],
-        [PAWL[0] - NOTCH_DEPTH, PAWL[1]/2], [0.5, PAWL[1]/2], [0.5, 1.3]]);
+        [-NOTCH_DEPTH + 0.1, -0.15], [0.4, -1.05], [0.4, -PAWL[1]/2], [PAWL[0] - NOTCH_DEPTH, -PAWL[1]/2],
+        [PAWL[0] - NOTCH_DEPTH, PAWL[1]/2], [0.4, PAWL[1]/2], [0.4, 1.05], [-NOTCH_DEPTH + 0.1, 0.15]]);
 }
 module pawl() { translate([0, SLIDE_Y0 - U_DIAL, 0]) rotate(PAWL_ANG) translate([DIAL_D/2, 0, 0]) pawl_body(); }
 module pawl_print() { translate([0, 0, -(PAWL_POCKET_Z + 0.2)]) pawl_body(); }

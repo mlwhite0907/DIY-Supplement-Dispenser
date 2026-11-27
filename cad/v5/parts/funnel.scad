@@ -18,8 +18,10 @@ module funnel() {
     difference() {
         union() {
             // ceiling plate
-            translate([0, 0, Z_CEIL]) cx(CEIL_T, cb=0)
-                polygon([[-hw + 5, yf], [hw - 5, yf], [hw, yf + 5], [hw, yr], [-hw, yr], [-hw, yf + 5]]);
+            translate([0, 0, Z_CEIL]) linear_extrude(CEIL_T) intersection() {
+                translate([-hw, yf - 5]) square([2*hw, yr - yf + 5]);
+                body_2d(SKIN_T + 0.6);          // follows the shell's inside at the corners
+            }
             // body: a 45-degree cone from the ceiling up to the hub step
             hull() {
                 translate([-CONE_BASE, -CONE_BASE, Z_CEIL_TOP - 1]) cube([2*CONE_BASE, 2*CONE_BASE, 1]);

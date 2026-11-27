@@ -30,6 +30,8 @@ module guide_plate() {
             translate([0, 0, Z_GP_TOP - 3.2]) cylinder(d=6.4, h=4);
         }
         for (a = JAW_ANGLES) rotate(a) jaw_track();
+        // shallow seat that centres the gasket
+        translate([0, 0, Z_GP_TOP - 0.6]) cylinder(d=GASKET_OD + 0.4, h=1);
     }
 }
 module guide_plate_print() { translate([0, 0, Z_GP_TOP]) rotate([180, 0, 0]) guide_plate(); }
@@ -44,7 +46,7 @@ module jaw_top_2d(rf, grooves=true) {
 module jaw_body(rp = R_PIN) {
     rf = rp - PIN_OFF;
     union() {
-        translate([0, 0, Z_GP_TOP]) linear_extrude(JAW_H) jaw_top_2d(rf);
+        translate([0, 0, Z_GP_TOP]) cx(JAW_H, ct=1.0) jaw_top_2d(rf);
         hull() {                                        // dovetail foot
             translate([rf + FOOT_IN, -DOVE[1]/2, Z_HUB_TOP]) cube([JAW_L - FOOT_IN, DOVE[1], 0.01]);
             translate([rf + FOOT_IN, -DOVE[0]/2, Z_GP_TOP]) cube([JAW_L - FOOT_IN, DOVE[0], 0.01]);
@@ -58,7 +60,7 @@ module jaw_print() { translate([-R_PIN, 0, Z_GP_TOP + JAW_H]) rotate([180, 0, 0]
 // TPU boot: clips over the jaw's face and hooks into the side grooves
 module jaw_boot_body(rp = R_PIN) {
     rf = rp - PIN_OFF;
-    translate([0, 0, Z_GP_TOP + 0.6]) linear_extrude(JAW_H - 0.6) difference() {
+    translate([0, 0, Z_GP_TOP + 0.6]) linear_extrude(JAW_H - 1.8) difference() {
         intersection() {
             offset(delta=PAD_T) jaw_top_2d(rf, false);
             translate([rf - 3, -JAW_W]) square([3 + 5.4, 2*JAW_W]);

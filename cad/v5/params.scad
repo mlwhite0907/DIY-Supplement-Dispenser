@@ -180,7 +180,8 @@ NOTCH_DEPTH = 0.7;                   // detent notch depth on the rim
 PAWL    = [4.6, 5.0, 4.4];           // pawl [length, width, height]
 PAWL_TUBE = [5.0, 3.4, 4.4];         // TPU spring tube [OD, ID, height], crushed across its diameter
 PAWL_POCKET_Z = Z_SLIDE_TOP - 4.8;   // pocket floor
-PAWL_ANG = 250;                      // pawl direction from the dial axis (slide-local, deg): front-left
+PAWL_SPRING_R = DIAL_D/2 - NOTCH_DEPTH + PAWL[0] + PAWL_TUBE[0]/2 - 0.5;   // tube centre: 0.5 mm preload
+PAWL_ANG = 247.5;                    // pawl direction from the dial axis (front-left); must be a multiple of CLICK_DEG
 CL_PLUNGER = 0.15;
 GRIP    = [4.0, 9.2, 3.4];           // pinch bar in the dial top: [bar width, recess radius, recess depth]     // finger dimples in the dial: [top dia, bottom dia, depth, radius]
 
@@ -190,14 +191,20 @@ U_FACE  = U_ROD_FRONT0 + L_MAX + 1.0 + 2.4;   // slide front face (slide-local u
 HANDLE_W = SLIDE_W + 6;              // width of the slide face and of the scoop front
 Z_FACE0 = 0.5;                       // face block bottom (reveal 1.0 to the scoop front top at -0.5)
 Z_FACE1 = Z_SLIDE_TOP;               // flush with the slide top (prints on the bed); the reveal is in the shell
-DOG     = [16.0, 3.2, 5.0];          // dog under the slide: [x width, u thickness, drop below z = Z_FACE0]
-U_DOG1  = U_FACE - FACE_T - 0.3;     // dog front face (0.3 behind the scoop front wall)
-U_FLOOR_FRONT = U_DOG1 - DOG[1] - 0.6;   // chassis floor stops here under the face
+SCOOP_FRONT_T = 5.0;                 // scoop front wall
+NOTCH_R = min(14.0, HANDLE_W/2 - 13.5);      // half-moon finger notch in the scoop's top edge
+DOG     = [NOTCH_R, HANDLE_W/2 - 3.0, 3.2, 5.0];   // two dogs under the face block: [x inner, x outer, u thickness, drop below Z_FACE0]
+U_DOG1  = U_FACE - SCOOP_FRONT_T - 0.3;      // dog front face (0.3 behind the scoop's front wall)
+U_FLOOR_FRONT = U_FACE - FACE_T - 0.6;       // the chassis floor stops just behind the face block
+FLAP    = [DOG[0] + 4.0, DOG[1] - 2.5, 2.0];   // TPU latch flap behind each dog: [x inner, x outer, thickness]
+FLAP_TOP_Z = -2.6;                   // flap top (the dog's bottom edge is at Z_FACE0 - DOG[3])
+LATCH_Z = -10.6;                     // pedestal top = flap root
+LATCH_DOVE = [6.0, 8.0, 3.0];        // latch root dovetail [top width, bottom width, depth] along u
 NAME_BAND = [12.0, 2.0];             // charcoal name band: [height on the face, depth]; 45-degree dovetail, slides in from the side
 Z_BAND = (Z_FACE0 + Z_FACE1)/2;
-LUG_U0  = -30;                       // stop lugs on both slide sides: slide-local u in [LUG_U0, LUG_U0 + 6]
-LUG     = [3.0, 6.0];                // [reach, u length]; they run from Z_LUG0 to the slide top
-Z_LUG0  = Z_SLIDE_TOP - 10.4;
+LUG_U0  = 24;                        // stop lugs on both slide sides (slide-local u); always in front of the wand peg
+LUG     = [5.0, 6.0];                // [reach, u length]; they run from Z_LUG0 to the slide top
+Z_LUG0  = max(Z_SLIDE_TOP - 10.4, Z_FLOOR + 6.0 + LUG[0] + 1.1);   // lugs clear the floor rails
 STOP_PAD = 1.6;                      // TPU boot wall on each stop pier
 PIER_T  = 8.0;                       // stop pier thickness along u (solid PLA, part of the chassis wall)
 PIER_U0 = LUG_U0 + LUG[1] + STROKE + STOP_PAD;   // pier rear face (body u): lug + boot touch at full pull
@@ -216,8 +223,9 @@ NOTCH_U1  = PEG_U_HOME + PEG_D/2 + 0.2;                           // notch front
 NOTCH_U0  = PEG_U_HOME + WAND_SWING - PEG_D/2 - 0.2 - STROKE;     // notch rear end (slide-local u)
 NOTCH_Z   = [PEG_Z - PEG_D/2 - 0.5, PEG_Z + PEG_D/2 + WAND_ARM*(1 - cos(WAND_DEG)) + 0.5];
 NOTCH_DEPTH_X = 3.2;
-ARM_X     = [SLIDE_W/2 + 13.5, SLIDE_W/2 + 17.5];     // arm plate (x range), outside the funnel body
-ARM_SLOT_X = SLIDE_W/2 + 13.0;                         // the ceiling plate is notched from here outward
+ARM_X0    = max(SLIDE_W/2 + 13.5, (HUB_OD + 8)/2 - (Z_RING_BOT - 0.2 - SHOULDER_T - WAND_Z) + 1.0);   // clear of the funnel body's cone
+ARM_X     = [ARM_X0, ARM_X0 + 4.0];                    // arm plate (x range)
+ARM_SLOT_X = ARM_X0 - 0.5;                             // the ceiling plate is notched from here outward
 WAND_TILT = 18;                                        // the gate leans this far toward the user relative to the arm
 PEG_U = max(PEG_U_HOME, NOTCH_U0 + PULL_D + PEG_D/2 + 0.2);    // peg centre (body u) on the pull stroke
 WAND_ANGLE = asin((PEG_U - WAND_U)/WAND_ARM);                  // + = peg toward the user
@@ -237,12 +245,14 @@ module body_2d(inset=0) {
 SKIN_T   = 1.6;
 LIP_T    = 1.6;  LIP_H = 2.4;  LIP_CL = 0.3;      // tub rim lip: locates shell (outside) and chassis (inside)
 CH_INSET = SKIN_T + LIP_CL + LIP_T + LIP_CL;      // chassis floor outline inset from the body outline
-BOX_X    = SLIDE_W/2 + 19.0;         // chassis box side walls (inner face), 2 mm thick
+BOX_X    = max(SLIDE_W/2 + 19.0, ARM_X[1] + 1.5);   // chassis box side walls (inner face), 2 mm thick
 BOX_WALL = 2.0;
 RAIL     = [2.4, 6.0];               // floor guide rails [width, height]
 Y_BOX_REAR = hy(-REAR_L) + 6.0;      // inner face of the chassis rear wall; the purge slot lies in front of it
 BUMP = [20.0, 4.4, 1.6];             // rear bumper: [width, PLA block depth, TPU proud of the block]
-BOSS_Y   = [hy(HOLE_U1 - 2), hy(T_LEN + 1.5), Y_BOX_REAR - 6];   // front, strike-off line, rear
+HOME_GRIP = [6.6, 6.0, 7.6, 9.0];    // slide home catch: TPU tube OD on the bumper, slot width / depth / height in the slide's rear end
+SCOOP_DETENT_Y = 20;                 // scoop home detent (head y): bump on the tub rails, groove in the scoop walls
+BOSS_Y   = [hy(PIER_U0 - STOP_PAD - 6.5), hy(T_LEN + 1.5), Y_BOX_REAR - 6];   // front (just behind the stop piers), strike-off line, rear
 BOSS_XY  = [for (y = BOSS_Y) for (s = [-1, 1]) [s*(BOX_X - 4), y]];   // 6 x M3 from above
 SHELL_Z0 = 0.2;                      // shell skin starts here (never bears on the tub)
 HUB_STEP_OD = HUB_OD + 8;            // ledge the shell's shoulder rests on
@@ -256,18 +266,22 @@ SEAL_REBATE = 1.4;                   // relief in the ceiling where the blade li
 PED_H     = 35.0;                    // tub height (z from -PED_H to 0)
 TUB_FLOOR_T = 1.2;
 FLANGE_W  = 6.0;                     // inward rim flange the chassis rests on
-SCOOP_CL  = 0.25;
+FLANGE_T  = 2.4;
+SCOOP_CL  = 0.3;
 SCOOP_WALL = 1.6;
-SCOOP_Z0  = -PED_H + TUB_FLOOR_T + 0.4;
-SCOOP_RIM_Z = -1.6;                  // side walls' top, inside the tub
-SCOOP_FRONT_Z = -0.5;                // front wall top
-SCOOP_Y_REAR = hy(HOLE_U0) + STROKE + 62;      // spout tip (head y at home)
-SCOOP_TAPER = 34;                    // length of the tapered spout
-SPOUT_W   = CLASS_NAME == "L" ? 44 : 40;   // pour lip: narrower lips bridge with cohesive powders
-FEET_T    = 2.5;
+SCOOP_HW  = HANDLE_W/2 - 1.0;        // tray outer half-width (the front wall is HANDLE_W wide)
+SCOOP_Z0  = -PED_H + TUB_FLOOR_T + 0.2;
+SCOOP_RIM_Z = -1.0;                  // side walls' top
+SCOOP_FRONT_Z = -0.5;                // front wall top (1 mm reveal under the slide face)
+SCOOP_TAPER = 34;                    // length of the tapered, ramped pour end
+SCOOP_Y_TAPER = hy(HOLE_U0) + STROKE + 8;      // the landing zone ends 8 mm before the taper starts
+SCOOP_Y_REAR = SCOOP_Y_TAPER + SCOOP_TAPER;    // pour lip (head y at home)
+SPOUT_W   = CLASS_NAME == "L" ? 44 : 40;       // pour lip width: narrower lips bridge with cohesive powders
+SPOUT_RISE = 10;                     // the floor ramps up this much to the lip
 PED_GAP   = 6;
 ROW_PITCH = BODY_W + PED_GAP;
-LATCH_TOOTH_Z = -2.6;                // latch tooth top (dog bottom is at Z_FACE0 - DOG[2])
+MAT_T     = 2.0;                     // TPU mat under each head (one tile per head, tiles lock together)
+MAT_RIM   = [2.6, 2.0];              // locating rim round the tub [width, height]
 
 // (the dimension report lives in dosebar.scad)
 
